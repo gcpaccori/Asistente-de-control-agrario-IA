@@ -290,51 +290,10 @@ def build_context(role: str, phone: str, last_user_message: str) -> dict[str, An
     return context
 
 
-def mock_mml_response(role: str) -> dict[str, Any]:
-    if role == "consulta":
-        return {
-            "role": "consulta",
-            "respuesta_chat": (
-                "Con la información actual registrada, puedo ayudarte si me confirmas "
-                "qué cultivo estás trabajando."
-            ),
-            "acciones": {"actualizar_formulario": {}, "alerta": None, "log": "Mock consulta"},
-            "estado": {"formulario_completo": True, "confianza": 0.4},
-        }
-    if role == "intervencion":
-        return {
-            "role": "intervencion",
-            "respuesta_chat": (
-                "Detecto que necesitas apoyo técnico. Coordinaré una revisión para tu "
-                "cultivo."
-            ),
-            "acciones": {
-                "actualizar_formulario": {},
-                "alerta": {
-                    "nivel": "medio",
-                    "motivo": "Revision requerida",
-                    "accion_recomendada": "Contacto tecnico",
-                },
-                "log": "Mock intervencion",
-            },
-            "estado": {"formulario_completo": True, "confianza": 0.6},
-        }
-    return {
-        "role": "formulario",
-        "respuesta_chat": "¿Qué cultivo estás trabajando?",
-        "acciones": {
-            "actualizar_formulario": {"cultivo": None},
-            "alerta": None,
-            "log": "Mock formulario",
-        },
-        "estado": {"formulario_completo": False, "confianza": 0.35},
-    }
-
-
 def call_groq(role: str, context: dict[str, Any]) -> dict[str, Any]:
     api_key = os.getenv("GROQ_API_KEY") or os.environ.get("console.groq.com_apikey")
     if not api_key:
-        return mock_mml_response(role)
+        raise RuntimeError("Falta GROQ_API_KEY para conectar con Groq.")
 
     agent_config = get_agent_config(role)
     headers = {
@@ -360,14 +319,14 @@ def call_groq(role: str, context: dict[str, Any]) -> dict[str, Any]:
             response_body = response.read().decode("utf-8")
         content = json.loads(response_body)["choices"][0]["message"]["content"]
         return json.loads(content)
-    except (json.JSONDecodeError, KeyError, urllib.error.URLError):
-        return mock_mml_response(role)
+    except (json.JSONDecodeError, KeyError, urllib.error.URLError) as exc:
+        raise RuntimeError("Error al conectar con Groq.") from exc
 
 
 def run_mml(role: str, context: dict[str, Any]) -> dict[str, Any]:
-    if MML_PROVIDER == "groq":
-        return call_groq(role, context)
-    return mock_mml_response(role)
+    if MML_PROVIDER != "groq":
+        raise RuntimeError("MML_PROVIDER debe ser 'groq' para usar el servicio real.")
+    return call_groq(role, context)
 
 
 def get_agent_config(role: str) -> dict[str, Any]:
