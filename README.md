@@ -49,18 +49,26 @@ Desde el panel puedes:
 - Registrar productores autorizados y asignar roles por productor.
 - Ver historial y análisis reciente por productor.
 
-## Modelo (Groq)
-El servidor se integra con Groq a través del contrato JSON. Configura Groq:
+## Modelo (Groq / xAI)
+El servidor se integra con Groq o xAI a través del contrato JSON.
 
 Puedes usar variables de entorno o un archivo `.env` en la raíz del proyecto.
 
-**Opción 1: variables de entorno**
+**Opción 1: variables de entorno (Groq)**
 ```bash
 export MML_PROVIDER=groq
 export GROQ_API_KEY="tu_api_key"
 # Alternativa si tu plataforma expone la clave con este nombre:
 # export console.groq.com_apikey="tu_api_key"
 export GROQ_MODEL="llama-3.1-8b-instant"
+python app.py
+```
+
+**Opción 1b: variables de entorno (xAI)**
+```bash
+export MML_PROVIDER=xai
+export XAI_API_KEY="tu_api_key"
+export XAI_MODEL="grok-4-latest"
 python app.py
 ```
 
