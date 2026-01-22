@@ -63,6 +63,10 @@ python validate_local_gguf.py
 
 Las salidas de pruebas adicionales (3 por rol) se registran en:
 `docs/pruebas_gguf_locales.md`.
+Las pruebas de QA rápidas sobre el modelo local están en:
+`docs/qa_gguf_local.md`.
+Un flujo real (pregunta del productor y respuesta obtenida en ejecución)
+está documentado en `docs/flujo_real_mml.md`.
 
 ## Contrato JSON y conversación (aclaración)
 El **contrato JSON** es el formato estrictamente esperado entre el servidor y
