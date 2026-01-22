@@ -7,9 +7,8 @@ from typing import Any
 import json
 import os
 import sqlite3
-import urllib.error
-import urllib.request
 from flask import Flask, g, jsonify, redirect, render_template, request, url_for
+from openai import OpenAI, OpenAIError
 
 BASE_DIR = Path(__file__).resolve().parent
 INSTANCE_DIR = BASE_DIR / "instance"
@@ -35,7 +34,6 @@ def load_env_file() -> None:
 
 load_env_file()
 
-GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
 MML_PROVIDER = os.getenv("MML_PROVIDER", "mock")
 
@@ -296,30 +294,23 @@ def call_groq(role: str, context: dict[str, Any]) -> dict[str, Any]:
         raise RuntimeError("Falta GROQ_API_KEY para conectar con Groq.")
 
     agent_config = get_agent_config(role)
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-    }
-    payload = {
-        "model": GROQ_MODEL,
-        "messages": [
-            {"role": "system", "content": agent_config["prompt"]},
-            {"role": "user", "content": json.dumps(context, ensure_ascii=False)},
-        ],
-        "response_format": {"type": "json_object"},
-        "temperature": 0.2,
-        "max_tokens": agent_config["max_tokens"],
-    }
-    data = json.dumps(payload).encode("utf-8")
-    request_payload = urllib.request.Request(
-        GROQ_API_URL, data=data, headers=headers, method="POST"
+    client = OpenAI(
+        api_key=api_key,
+        base_url="https://api.groq.com/openai/v1",
     )
     try:
-        with urllib.request.urlopen(request_payload, timeout=60) as response:
-            response_body = response.read().decode("utf-8")
-        content = json.loads(response_body)["choices"][0]["message"]["content"]
-        return json.loads(content)
-    except (json.JSONDecodeError, KeyError, urllib.error.URLError) as exc:
+        response = client.responses.create(
+            input=[
+                {"role": "system", "content": agent_config["prompt"]},
+                {"role": "user", "content": json.dumps(context, ensure_ascii=False)},
+            ],
+            model=GROQ_MODEL,
+            response_format={"type": "json_object"},
+            temperature=0.2,
+            max_output_tokens=agent_config["max_tokens"],
+        )
+        return json.loads(response.output_text)
+    except (json.JSONDecodeError, OpenAIError) as exc:
         raise RuntimeError("Error al conectar con Groq.") from exc
 
 
