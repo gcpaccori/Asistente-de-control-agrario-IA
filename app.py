@@ -316,7 +316,7 @@ def mock_mml_response(role: str) -> dict[str, Any]:
 
 
 def call_groq(role: str, context: dict[str, Any]) -> dict[str, Any]:
-    api_key = os.getenv("GROQ_API_KEY")
+    api_key = os.getenv("GROQ_API_KEY") or os.environ.get("console.groq.com_apikey")
     if not api_key:
         return mock_mml_response(role)
 
