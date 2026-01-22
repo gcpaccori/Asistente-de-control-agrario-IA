@@ -46,6 +46,8 @@ Desde el panel puedes:
 - Editar prompts y tokens máximos.
 - Revisar formularios generados y actualizar su estado.
 - Revisar alertas de intervención y cerrar casos.
+- Registrar productores autorizados y asignar roles por productor.
+- Ver historial y análisis reciente por productor.
 
 ## Modelo (Groq opcional)
 Por defecto el servidor usa un **mock**. Para usar Groq:
@@ -67,6 +69,9 @@ cd whatsapp
 npm install
 FLASK_URL="http://localhost:5000" node index.js
 ```
+
+Para que un productor sea atendido, debes marcarlo como **autorizado** en
+`/admin/producers`. Si no está autorizado, el endpoint `/agent` devuelve `403`.
 
 ## Endpoints principales
 ### `POST /agent`

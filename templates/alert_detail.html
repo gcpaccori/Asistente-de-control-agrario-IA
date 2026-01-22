@@ -6,8 +6,10 @@
     <p><strong>Nivel:</strong> {{ alert.level }}</p>
     <p><strong>Motivo:</strong> {{ alert.reason }}</p>
     <p><strong>Acción recomendada:</strong> {{ alert.action }}</p>
+    <p><strong>Mensaje:</strong> {{ alert.message }}</p>
     <p><strong>Estado:</strong> {{ alert.status }}</p>
     <p><strong>Creada:</strong> {{ alert.created_at }}</p>
+    <p><strong>Enviada:</strong> {{ alert.sent_at or "-" }}</p>
   </div>
   <div class="card">
     <form method="post" action="{{ url_for('admin_alert_status', alert_id=alert.id) }}">

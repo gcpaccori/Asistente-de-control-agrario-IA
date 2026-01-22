@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Productor #{{ producer.id }}</h1>
+  <div class="card">
+    <form method="post" action="{{ url_for('admin_producer_update', producer_id=producer.id) }}">
+      <div class="small">Teléfono</div>
+      <div><strong>{{ producer.phone }}</strong></div>
+      <div class="small">Nombre</div>
+      <input type="text" name="name" value="{{ producer.name or '' }}" />
+      <div class="small">Zona</div>
+      <input type="text" name="zone" value="{{ producer.zone or '' }}" />
+      <div class="small">Rol asignado</div>
+      <select name="assigned_role">
+        <option value="" {% if not producer.assigned_role %}selected{% endif %}>Sin asignar</option>
+        <option value="formulario" {% if producer.assigned_role == "formulario" %}selected{% endif %}>formulario</option>
+        <option value="consulta" {% if producer.assigned_role == "consulta" %}selected{% endif %}>consulta</option>
+        <option value="intervencion" {% if producer.assigned_role == "intervencion" %}selected{% endif %}>intervencion</option>
+      </select>
+      <div>
+        <label>
+          <input type="checkbox" name="allowed" {% if producer.allowed %}checked{% endif %} />
+          Autorizado para análisis
+        </label>
+      </div>
+      <div>
+        <label>
+          <input type="checkbox" name="enable_formulario" {% if producer.enable_formulario %}checked{% endif %} />
+          Agente formulario
+        </label>
+        <label>
+          <input type="checkbox" name="enable_consulta" {% if producer.enable_consulta %}checked{% endif %} />
+          Agente consulta
+        </label>
+        <label>
+          <input type="checkbox" name="enable_intervencion" {% if producer.enable_intervencion %}checked{% endif %} />
+          Agente intervención
+        </label>
+      </div>
+      <button class="btn" type="submit">Guardar</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Formularios</h2>
+    <form method="post" action="{{ url_for('admin_form_create') }}">
+      <input type="hidden" name="producer_id" value="{{ producer.id }}" />
+      <button class="btn" type="submit">Nuevo formulario</button>
+    </form>
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Estado</th>
+          <th>Cultivo</th>
+          <th>Síntoma</th>
+          <th>Actualizado</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for form in forms %}
+          <tr>
+            <td><a href="{{ url_for('admin_form_detail', form_id=form.id) }}">{{ form.id }}</a></td>
+            <td>{{ form.status }}</td>
+            <td>{{ form.cultivo or "-" }}</td>
+            <td>{{ form.sintoma or "-" }}</td>
+            <td>{{ form.updated_at }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Alertas</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nivel</th>
+          <th>Motivo</th>
+          <th>Estado</th>
+          <th>Creada</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for alert in alerts %}
+          <tr>
+            <td><a href="{{ url_for('admin_alert_detail', alert_id=alert.id) }}">{{ alert.id }}</a></td>
+            <td>{{ alert.level }}</td>
+            <td>{{ alert.reason }}</td>
+            <td>{{ alert.status }}</td>
+            <td>{{ alert.created_at }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Últimos mensajes</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Dirección</th>
+          <th>Contenido</th>
+          <th>Fecha</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for msg in messages %}
+          <tr>
+            <td>{{ msg.direction }}</td>
+            <td>{{ msg.content }}</td>
+            <td>{{ msg.created_at }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

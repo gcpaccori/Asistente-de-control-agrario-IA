@@ -67,9 +67,15 @@ def init_db() -> None:
         CREATE TABLE IF NOT EXISTS producers (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             phone TEXT UNIQUE NOT NULL,
+            name TEXT,
             zone TEXT,
             preferred_language TEXT NOT NULL,
             main_crops TEXT,
+            allowed INTEGER NOT NULL,
+            assigned_role TEXT,
+            enable_formulario INTEGER NOT NULL,
+            enable_consulta INTEGER NOT NULL,
+            enable_intervencion INTEGER NOT NULL,
             created_at TEXT NOT NULL
         );
 
@@ -92,8 +98,10 @@ def init_db() -> None:
             level TEXT NOT NULL,
             reason TEXT NOT NULL,
             action TEXT NOT NULL,
+            message TEXT NOT NULL,
             status TEXT NOT NULL,
             created_at TEXT NOT NULL,
+            sent_at TEXT,
             FOREIGN KEY (producer_id) REFERENCES producers (id)
         );
 
@@ -116,6 +124,43 @@ def init_db() -> None:
         );
         """
     )
+    db.commit()
+    db.close()
+
+
+def migrate_db() -> None:
+    db = sqlite3.connect(app.config["DATABASE"])
+    db.row_factory = sqlite3.Row
+    columns = {
+        row["name"] for row in db.execute("PRAGMA table_info(producers)").fetchall()
+    }
+    if "name" not in columns:
+        db.execute("ALTER TABLE producers ADD COLUMN name TEXT")
+    if "allowed" not in columns:
+        db.execute("ALTER TABLE producers ADD COLUMN allowed INTEGER NOT NULL DEFAULT 0")
+    if "assigned_role" not in columns:
+        db.execute("ALTER TABLE producers ADD COLUMN assigned_role TEXT")
+    if "enable_formulario" not in columns:
+        db.execute(
+            "ALTER TABLE producers ADD COLUMN enable_formulario INTEGER NOT NULL DEFAULT 1"
+        )
+    if "enable_consulta" not in columns:
+        db.execute(
+            "ALTER TABLE producers ADD COLUMN enable_consulta INTEGER NOT NULL DEFAULT 1"
+        )
+    if "enable_intervencion" not in columns:
+        db.execute(
+            "ALTER TABLE producers ADD COLUMN enable_intervencion INTEGER NOT NULL DEFAULT 1"
+        )
+
+    alert_columns = {
+        row["name"] for row in db.execute("PRAGMA table_info(alerts)").fetchall()
+    }
+    if "message" not in alert_columns:
+        db.execute("ALTER TABLE alerts ADD COLUMN message TEXT NOT NULL DEFAULT ''")
+    if "sent_at" not in alert_columns:
+        db.execute("ALTER TABLE alerts ADD COLUMN sent_at TEXT")
+
     db.commit()
     db.close()
 
@@ -146,10 +191,13 @@ def get_or_create_producer(phone: str) -> dict[str, Any]:
     now = utc_now()
     db.execute(
         """
-        INSERT INTO producers (phone, zone, preferred_language, main_crops, created_at)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO producers (
+            phone, name, zone, preferred_language, main_crops, allowed, assigned_role,
+            enable_formulario, enable_consulta, enable_intervencion, created_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        (phone, None, "es", json.dumps([]), now),
+        (phone, None, None, "es", json.dumps([]), 0, None, 1, 1, 1, now),
     )
     db.commit()
     row = db.execute("SELECT * FROM producers WHERE phone = ?", (phone,)).fetchone()
@@ -272,6 +320,7 @@ def call_groq(role: str, context: dict[str, Any]) -> dict[str, Any]:
     if not api_key:
         return mock_mml_response(role)
 
+    agent_config = get_agent_config(role)
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
@@ -279,12 +328,12 @@ def call_groq(role: str, context: dict[str, Any]) -> dict[str, Any]:
     payload = {
         "model": GROQ_MODEL,
         "messages": [
-            {"role": "system", "content": PROMPTS[role]},
+            {"role": "system", "content": agent_config["prompt"]},
             {"role": "user", "content": json.dumps(context, ensure_ascii=False)},
         ],
         "response_format": {"type": "json_object"},
         "temperature": 0.2,
-        "max_tokens": get_agent_config(role)["max_tokens"],
+        "max_tokens": agent_config["max_tokens"],
     }
     data = json.dumps(payload).encode("utf-8")
     request_payload = urllib.request.Request(
@@ -350,14 +399,15 @@ def apply_model_actions(phone: str, model_output: dict[str, Any]) -> dict[str, A
         db = get_db()
         db.execute(
             """
-            INSERT INTO alerts (producer_id, level, reason, action, status, created_at)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO alerts (producer_id, level, reason, action, message, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 producer["id"],
                 alert.get("nivel", "medio"),
                 alert.get("motivo", "sin motivo"),
                 alert.get("accion_recomendada", "sin accion"),
+                model_output.get("respuesta_chat", ""),
                 "abierta",
                 utc_now(),
             ),
@@ -374,17 +424,18 @@ def health() -> Any:
 @app.post("/agent")
 def agent() -> Any:
     payload = request.get_json(force=True)
-    role = payload.get("role", "formulario")
+    role = payload.get("role")
     phone = payload.get("phone")
     message = payload.get("message", "")
-
-    if role not in PROMPTS:
-        return jsonify({"error": "role invalido"}), 400
 
     if not phone:
         return jsonify({"error": "phone requerido"}), 400
 
     producer = get_or_create_producer(phone)
+    role = role or producer.get("assigned_role") or "formulario"
+    if role not in PROMPTS:
+        return jsonify({"error": "role invalido"}), 400
+
     db = get_db()
     db.execute(
         "INSERT INTO messages (producer_id, direction, content, created_at) VALUES (?, ?, ?, ?)",
@@ -394,8 +445,16 @@ def agent() -> Any:
 
     context = build_context(role, phone, message)
     agent_config = get_agent_config(role)
+    if not producer.get("allowed"):
+        return jsonify({"error": "productor no autorizado"}), 403
     if not agent_config.get("enabled"):
         return jsonify({"error": f"agente {role} desactivado"}), 403
+    if role == "formulario" and not producer.get("enable_formulario"):
+        return jsonify({"error": "agente formulario desactivado"}), 403
+    if role == "consulta" and not producer.get("enable_consulta"):
+        return jsonify({"error": "agente consulta desactivado"}), 403
+    if role == "intervencion" and not producer.get("enable_intervencion"):
+        return jsonify({"error": "agente intervencion desactivado"}), 403
 
     model_output = run_mml(role, context)
     model_output = apply_model_actions(phone, model_output)
@@ -456,17 +515,45 @@ def create_alert() -> Any:
     db = get_db()
     db.execute(
         """
-        INSERT INTO alerts (producer_id, level, reason, action, status, created_at)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO alerts (producer_id, level, reason, action, message, status, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         """,
         (
             producer["id"],
             alert.get("nivel", "medio"),
             alert.get("motivo", "sin motivo"),
             alert.get("accion_recomendada", "sin accion"),
+            alert.get("mensaje", ""),
             "abierta",
             utc_now(),
         ),
+    )
+    db.commit()
+    return jsonify({"status": "ok"})
+
+
+@app.get("/alerts/pending")
+def alerts_pending() -> Any:
+    db = get_db()
+    rows = db.execute(
+        """
+        SELECT alerts.id, alerts.message, alerts.level, alerts.reason, alerts.action,
+               producers.phone
+        FROM alerts
+        JOIN producers ON producers.id = alerts.producer_id
+        WHERE alerts.status = 'abierta' AND alerts.sent_at IS NULL
+        ORDER BY alerts.created_at ASC
+        """
+    ).fetchall()
+    return jsonify({"alerts": [dict(row) for row in rows]})
+
+
+@app.post("/alerts/<int:alert_id>/sent")
+def alert_mark_sent(alert_id: int) -> Any:
+    db = get_db()
+    db.execute(
+        "UPDATE alerts SET sent_at = ?, status = 'enviada' WHERE id = ?",
+        (utc_now(), alert_id),
     )
     db.commit()
     return jsonify({"status": "ok"})
@@ -482,6 +569,122 @@ def admin_dashboard() -> Any:
         "messages": db.execute("SELECT COUNT(*) FROM messages").fetchone()[0],
     }
     return render_template("dashboard.html", counts=counts)
+
+
+@app.get("/admin/producers")
+def admin_producers() -> Any:
+    db = get_db()
+    rows = db.execute("SELECT * FROM producers ORDER BY created_at DESC").fetchall()
+    return render_template("producers.html", producers=rows)
+
+
+@app.get("/admin/producers/new")
+def admin_producer_new() -> Any:
+    return render_template("producer_new.html")
+
+
+@app.post("/admin/producers")
+def admin_producer_create() -> Any:
+    phone = request.form.get("phone", "").strip()
+    name = request.form.get("name", "").strip() or None
+    zone = request.form.get("zone", "").strip() or None
+    allowed = 1 if request.form.get("allowed") == "on" else 0
+    assigned_role = request.form.get("assigned_role") or None
+    now = utc_now()
+    db = get_db()
+    db.execute(
+        """
+        INSERT INTO producers (
+            phone, name, zone, preferred_language, main_crops, allowed, assigned_role,
+            enable_formulario, enable_consulta, enable_intervencion, created_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (phone, name, zone, "es", json.dumps([]), allowed, assigned_role, 1, 1, 1, now),
+    )
+    db.commit()
+    return redirect(url_for("admin_producers"))
+
+
+@app.get("/admin/producers/<int:producer_id>")
+def admin_producer_detail(producer_id: int) -> Any:
+    db = get_db()
+    producer = db.execute(
+        "SELECT * FROM producers WHERE id = ?", (producer_id,)
+    ).fetchone()
+    forms = db.execute(
+        "SELECT * FROM forms WHERE producer_id = ? ORDER BY created_at DESC",
+        (producer_id,),
+    ).fetchall()
+    alerts = db.execute(
+        "SELECT * FROM alerts WHERE producer_id = ? ORDER BY created_at DESC",
+        (producer_id,),
+    ).fetchall()
+    messages = db.execute(
+        """
+        SELECT direction, content, created_at
+        FROM messages
+        WHERE producer_id = ?
+        ORDER BY created_at DESC
+        LIMIT 20
+        """,
+        (producer_id,),
+    ).fetchall()
+    return render_template(
+        "producer_detail.html",
+        producer=producer,
+        forms=forms,
+        alerts=alerts,
+        messages=messages,
+    )
+
+
+@app.post("/admin/producers/<int:producer_id>/update")
+def admin_producer_update(producer_id: int) -> Any:
+    name = request.form.get("name", "").strip() or None
+    zone = request.form.get("zone", "").strip() or None
+    allowed = 1 if request.form.get("allowed") == "on" else 0
+    assigned_role = request.form.get("assigned_role") or None
+    enable_formulario = 1 if request.form.get("enable_formulario") == "on" else 0
+    enable_consulta = 1 if request.form.get("enable_consulta") == "on" else 0
+    enable_intervencion = 1 if request.form.get("enable_intervencion") == "on" else 0
+    db = get_db()
+    db.execute(
+        """
+        UPDATE producers
+        SET name = ?, zone = ?, allowed = ?, assigned_role = ?,
+            enable_formulario = ?, enable_consulta = ?, enable_intervencion = ?
+        WHERE id = ?
+        """,
+        (
+            name,
+            zone,
+            allowed,
+            assigned_role,
+            enable_formulario,
+            enable_consulta,
+            enable_intervencion,
+            producer_id,
+        ),
+    )
+    db.commit()
+    return redirect(url_for("admin_producer_detail", producer_id=producer_id))
+
+
+@app.post("/admin/forms/new")
+def admin_form_create() -> Any:
+    producer_id = int(request.form.get("producer_id"))
+    now = utc_now()
+    db = get_db()
+    db.execute(
+        """
+        INSERT INTO forms (producer_id, status, cultivo, sintoma, inicio_problema, foto_recibida, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (producer_id, "abierto", None, None, None, 0, now, now),
+    )
+    db.commit()
+    return redirect(url_for("admin_producer_detail", producer_id=producer_id))
 
 
 @app.get("/admin/agents")
@@ -597,6 +800,7 @@ def close_db(exception: Exception | None) -> None:
 
 if __name__ == "__main__":
     init_db()
+    migrate_db()
     with app.app_context():
         ensure_agent_defaults()
     app.run(host="0.0.0.0", port=5000, debug=True)
