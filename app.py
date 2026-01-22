@@ -3,6 +3,10 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
+import json
+import os
+
+import requests
 from flask import Flask, jsonify, request
 
 app = Flask(__name__)
@@ -12,6 +16,34 @@ PRODUCERS: dict[str, dict[str, Any]] = {}
 FORM_STATE: dict[str, dict[str, Any]] = {}
 ALERTS: list[dict[str, Any]] = []
 MESSAGES: list[dict[str, Any]] = []
+
+GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
+GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
+MML_PROVIDER = os.getenv("MML_PROVIDER", "mock")
+
+PROMPTS = {
+    "formulario": (
+        "Eres un asistente agrónomo por WhatsApp. Pregunta natural y breve. "
+        "Extrae datos para completar el formulario. "
+        "Devuelve SOLO JSON válido con las claves: "
+        "role, respuesta_chat, acciones{actualizar_formulario,alerta,log}, "
+        "estado{formulario_completo,confianza}."
+    ),
+    "consulta": (
+        "Responde usando SOLO la información del contexto. "
+        "Si falta información, pide una sola aclaración. "
+        "Devuelve SOLO JSON válido con las claves: "
+        "role, respuesta_chat, acciones{actualizar_formulario,alerta,log}, "
+        "estado{formulario_completo,confianza}."
+    ),
+    "intervencion": (
+        "Analiza persistencia o riesgo con el historial. "
+        "Si amerita, genera alerta. "
+        "Devuelve SOLO JSON válido con las claves: "
+        "role, respuesta_chat, acciones{actualizar_formulario,alerta,log}, "
+        "estado{formulario_completo,confianza}."
+    ),
+}
 
 
 def utc_now() -> str:
@@ -109,6 +141,54 @@ def mock_mml_response(role: str) -> dict[str, Any]:
     }
 
 
+def call_groq(role: str, context: dict[str, Any]) -> dict[str, Any]:
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        return mock_mml_response(role)
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": GROQ_MODEL,
+        "messages": [
+            {"role": "system", "content": PROMPTS[role]},
+            {"role": "user", "content": json.dumps(context, ensure_ascii=False)},
+        ],
+        "response_format": {"type": "json_object"},
+        "temperature": 0.2,
+        "max_tokens": 300,
+    }
+    response = requests.post(GROQ_API_URL, headers=headers, json=payload, timeout=60)
+    response.raise_for_status()
+    content = response.json()["choices"][0]["message"]["content"]
+    try:
+        return json.loads(content)
+    except json.JSONDecodeError:
+        return mock_mml_response(role)
+
+
+def run_mml(role: str, context: dict[str, Any]) -> dict[str, Any]:
+    if MML_PROVIDER == "groq":
+        return call_groq(role, context)
+    return mock_mml_response(role)
+
+
+def apply_model_actions(phone: str, model_output: dict[str, Any]) -> dict[str, Any]:
+    actions = model_output.get("acciones", {})
+    updates = actions.get("actualizar_formulario", {})
+    if updates:
+        form = get_form_state(phone)
+        for key, value in updates.items():
+            if value is not None:
+                form[key] = value
+    alert = actions.get("alerta")
+    if alert:
+        ALERTS.append({"phone": phone, "alert": alert, "time": utc_now()})
+    return model_output
+
+
 @app.get("/health")
 def health() -> Any:
     return jsonify({"status": "ok", "time": utc_now()})
@@ -121,13 +201,17 @@ def agent() -> Any:
     phone = payload.get("phone")
     message = payload.get("message", "")
 
+    if role not in PROMPTS:
+        return jsonify({"error": "role invalido"}), 400
+
     if not phone:
         return jsonify({"error": "phone requerido"}), 400
 
     MESSAGES.append({"phone": phone, "from": "user", "text": message, "time": utc_now()})
 
     context = build_context(role, phone, message)
-    model_output = mock_mml_response(role)
+    model_output = run_mml(role, context)
+    model_output = apply_model_actions(phone, model_output)
 
     MESSAGES.append(
         {

@@ -22,6 +22,7 @@ de formularios.
 
 ## Requisitos
 - Python 3.10+
+- Node.js 18+ (solo si usas el puente de WhatsApp)
 
 Instalación:
 ```bash
@@ -31,6 +32,27 @@ pip install -r requirements.txt
 ## Ejecutar
 ```bash
 python app.py
+```
+
+## Modelo (Groq opcional)
+Por defecto el servidor usa un **mock**. Para usar Groq:
+
+```bash
+export MML_PROVIDER=groq
+export GROQ_API_KEY="tu_api_key"
+export GROQ_MODEL="llama-3.1-8b-instant"
+python app.py
+```
+
+## WhatsApp (puente inicial)
+Incluye un puente mínimo con `whatsapp-web.js` que usa tu sesión abierta en el
+navegador. Esto es solo para el MVP; puede violar términos del servicio.
+Recomendación: migrar a WhatsApp Business API cuando tengas presupuesto.
+
+```bash
+cd whatsapp
+npm install
+FLASK_URL="http://localhost:5000" node index.js
 ```
 
 ## Endpoints principales
