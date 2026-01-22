@@ -49,8 +49,8 @@ Desde el panel puedes:
 - Registrar productores autorizados y asignar roles por productor.
 - Ver historial y análisis reciente por productor.
 
-## Modelo (Groq opcional)
-Por defecto el servidor usa un **mock**. Para usar Groq:
+## Modelo (Groq)
+El servidor se integra con Groq a través del contrato JSON. Configura Groq:
 
 Puedes usar variables de entorno o un archivo `.env` en la raíz del proyecto.
 
@@ -88,8 +88,8 @@ Para que un productor sea atendido, debes marcarlo como **autorizado** en
 ## Endpoints principales
 ### `POST /agent`
 Recibe un mensaje y un rol, construye el contexto y devuelve el JSON que debe
-enviar el MML (mock por ahora). El cliente WhatsApp debe usar `respuesta_chat`
-para responder al productor.
+enviar el MML. El cliente WhatsApp debe usar `respuesta_chat` para responder
+al productor.
 
 ### `POST /form/update`
 Actualiza el estado del formulario del productor.

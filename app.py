@@ -35,7 +35,7 @@ def load_env_file() -> None:
 load_env_file()
 
 GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
-MML_PROVIDER = os.getenv("MML_PROVIDER", "mock")
+MML_PROVIDER = os.getenv("MML_PROVIDER", "groq")
 
 PROMPTS = {
     "formulario": (
