@@ -7,8 +7,8 @@ from typing import Any
 import json
 import os
 import sqlite3
-
-import requests
+import urllib.error
+import urllib.request
 from flask import Flask, g, jsonify, redirect, render_template, request, url_for
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -286,12 +286,16 @@ def call_groq(role: str, context: dict[str, Any]) -> dict[str, Any]:
         "temperature": 0.2,
         "max_tokens": get_agent_config(role)["max_tokens"],
     }
-    response = requests.post(GROQ_API_URL, headers=headers, json=payload, timeout=60)
-    response.raise_for_status()
-    content = response.json()["choices"][0]["message"]["content"]
+    data = json.dumps(payload).encode("utf-8")
+    request_payload = urllib.request.Request(
+        GROQ_API_URL, data=data, headers=headers, method="POST"
+    )
     try:
+        with urllib.request.urlopen(request_payload, timeout=60) as response:
+            response_body = response.read().decode("utf-8")
+        content = json.loads(response_body)["choices"][0]["message"]["content"]
         return json.loads(content)
-    except json.JSONDecodeError:
+    except (json.JSONDecodeError, KeyError, urllib.error.URLError):
         return mock_mml_response(role)
 
 
