@@ -7,7 +7,7 @@ de formularios.
 ## Objetivo
 - Recibir mensajes del productor.
 - Construir contexto filtrado por rol.
-- Llamar a un MML externo (Groq u otro) usando el contrato JSON.
+- Llamar a un MML local usando el contrato JSON.
 - Guardar/actualizar el formulario cuando corresponda.
 - Emitir alertas cuando aplique.
 
@@ -49,25 +49,20 @@ Desde el panel puedes:
 - Registrar productores autorizados y asignar roles por productor.
 - Ver historial y análisis reciente por productor.
 
-## Modelo (xAI)
-El servidor se integra con xAI a través del contrato JSON.
+## Modelo local (GGUF)
+Para pruebas locales en CPU usamos `llama-cpp-python` con un modelo GGUF
+cuantizado. Descarga el modelo y valida la carga con el script incluido:
 
-Puedes usar variables de entorno o un archivo `.env` en la raíz del proyecto.
-
-**Opción 1: variables de entorno (xAI)**
 ```bash
-export MML_PROVIDER=xai
-export XAI_API_KEY="tu_api_key"
-export XAI_MODEL="grok-4-latest"
-python app.py
+pip install -r requirements.txt
+mkdir -p models
+wget -O models/qwen2.5-0.5b-instruct-q4_k_m.gguf \\
+  https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf
+python validate_local_gguf.py
 ```
 
-**Opción 2: archivo .env**
-Copia `.env.example` a `.env` y reemplaza los valores:
-```bash
-cp .env.example .env
-python app.py
-```
+Las salidas de pruebas adicionales (3 por rol) se registran en:
+`docs/pruebas_gguf_locales.md`.
 
 ## WhatsApp (puente inicial)
 Incluye un puente mínimo con `whatsapp-web.js` que usa tu sesión abierta en el
