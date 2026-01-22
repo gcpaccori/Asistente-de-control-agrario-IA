@@ -34,6 +34,19 @@ pip install -r requirements.txt
 python app.py
 ```
 
+## Base de datos y panel visual
+Se usa SQLite en `instance/app.db` y una interfaz web básica en:
+
+```
+http://localhost:5000/admin
+```
+
+Desde el panel puedes:
+- Activar/desactivar agentes (3 roles).
+- Editar prompts y tokens máximos.
+- Revisar formularios generados y actualizar su estado.
+- Revisar alertas de intervención y cerrar casos.
+
 ## Modelo (Groq opcional)
 Por defecto el servidor usa un **mock**. Para usar Groq:
 

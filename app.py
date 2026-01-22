@@ -1,21 +1,23 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 import json
 import os
+import sqlite3
 
 import requests
-from flask import Flask, jsonify, request
+from flask import Flask, g, jsonify, redirect, render_template, request, url_for
 
-app = Flask(__name__)
+BASE_DIR = Path(__file__).resolve().parent
+INSTANCE_DIR = BASE_DIR / "instance"
+DB_PATH = INSTANCE_DIR / "app.db"
 
+app = Flask(__name__, instance_path=str(INSTANCE_DIR))
+app.config["DATABASE"] = str(DB_PATH)
 
-PRODUCERS: dict[str, dict[str, Any]] = {}
-FORM_STATE: dict[str, dict[str, Any]] = {}
-ALERTS: list[dict[str, Any]] = []
-MESSAGES: list[dict[str, Any]] = []
 
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
@@ -50,43 +52,167 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def get_db() -> sqlite3.Connection:
+    if "db" not in g:
+        g.db = sqlite3.connect(app.config["DATABASE"])
+        g.db.row_factory = sqlite3.Row
+    return g.db
+
+
+def init_db() -> None:
+    INSTANCE_DIR.mkdir(exist_ok=True)
+    db = sqlite3.connect(app.config["DATABASE"])
+    db.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS producers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            phone TEXT UNIQUE NOT NULL,
+            zone TEXT,
+            preferred_language TEXT NOT NULL,
+            main_crops TEXT,
+            created_at TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS forms (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            producer_id INTEGER NOT NULL,
+            status TEXT NOT NULL,
+            cultivo TEXT,
+            sintoma TEXT,
+            inicio_problema TEXT,
+            foto_recibida INTEGER NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (producer_id) REFERENCES producers (id)
+        );
+
+        CREATE TABLE IF NOT EXISTS alerts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            producer_id INTEGER NOT NULL,
+            level TEXT NOT NULL,
+            reason TEXT NOT NULL,
+            action TEXT NOT NULL,
+            status TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (producer_id) REFERENCES producers (id)
+        );
+
+        CREATE TABLE IF NOT EXISTS agent_configs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            role TEXT UNIQUE NOT NULL,
+            enabled INTEGER NOT NULL,
+            description TEXT NOT NULL,
+            prompt TEXT NOT NULL,
+            max_tokens INTEGER NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            producer_id INTEGER NOT NULL,
+            direction TEXT NOT NULL,
+            content TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (producer_id) REFERENCES producers (id)
+        );
+        """
+    )
+    db.commit()
+    db.close()
+
+
+def ensure_agent_defaults() -> None:
+    db = get_db()
+    existing = {
+        row["role"] for row in db.execute("SELECT role FROM agent_configs").fetchall()
+    }
+    for role, prompt in PROMPTS.items():
+        if role not in existing:
+            description = f"Agente {role} (configuración inicial)"
+            db.execute(
+                """
+                INSERT INTO agent_configs (role, enabled, description, prompt, max_tokens)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (role, 1, description, prompt, 300),
+            )
+    db.commit()
+
+
 def get_or_create_producer(phone: str) -> dict[str, Any]:
-    if phone not in PRODUCERS:
-        PRODUCERS[phone] = {
-            "id": len(PRODUCERS) + 1,
-            "phone": phone,
-            "zone": None,
-            "preferred_language": "es",
-            "main_crops": [],
-        }
-    return PRODUCERS[phone]
+    db = get_db()
+    row = db.execute("SELECT * FROM producers WHERE phone = ?", (phone,)).fetchone()
+    if row:
+        return dict(row)
+    now = utc_now()
+    db.execute(
+        """
+        INSERT INTO producers (phone, zone, preferred_language, main_crops, created_at)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (phone, None, "es", json.dumps([]), now),
+    )
+    db.commit()
+    row = db.execute("SELECT * FROM producers WHERE phone = ?", (phone,)).fetchone()
+    return dict(row)
 
 
-def get_form_state(phone: str) -> dict[str, Any]:
-    if phone not in FORM_STATE:
-        FORM_STATE[phone] = {
-            "cultivo": None,
-            "sintoma": None,
-            "inicio_problema": None,
-            "foto_recibida": False,
-        }
-    return FORM_STATE[phone]
+def get_or_create_form(producer_id: int) -> dict[str, Any]:
+    db = get_db()
+    row = db.execute(
+        """
+        SELECT * FROM forms
+        WHERE producer_id = ? AND status = 'abierto'
+        ORDER BY created_at DESC
+        LIMIT 1
+        """,
+        (producer_id,),
+    ).fetchone()
+    if row:
+        return dict(row)
+    now = utc_now()
+    db.execute(
+        """
+        INSERT INTO forms (producer_id, status, cultivo, sintoma, inicio_problema, foto_recibida, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (producer_id, "abierto", None, None, None, 0, now, now),
+    )
+    db.commit()
+    row = db.execute(
+        """
+        SELECT * FROM forms
+        WHERE producer_id = ? AND status = 'abierto'
+        ORDER BY created_at DESC
+        LIMIT 1
+        """,
+        (producer_id,),
+    ).fetchone()
+    return dict(row)
 
 
-def recent_chat(phone: str, limit: int = 6) -> list[str]:
-    rows = [m for m in MESSAGES if m["phone"] == phone]
-    rows = rows[-limit:]
-    return [f'{row["from"]}: {row["text"]}' for row in rows]
+def recent_chat(producer_id: int, limit: int = 6) -> list[str]:
+    db = get_db()
+    rows = db.execute(
+        """
+        SELECT direction, content FROM messages
+        WHERE producer_id = ?
+        ORDER BY created_at DESC
+        LIMIT ?
+        """,
+        (producer_id, limit),
+    ).fetchall()
+    items = list(reversed(rows))
+    return [f'{row["direction"]}: {row["content"]}' for row in items]
 
 
 def build_context(role: str, phone: str, last_user_message: str) -> dict[str, Any]:
     producer = get_or_create_producer(phone)
-    form_state = get_form_state(phone)
+    form_state = get_or_create_form(producer["id"])
     context: dict[str, Any] = {
         "role": role,
         "producer": producer,
         "form_state": form_state,
-        "recent_chat": recent_chat(phone),
+        "recent_chat": recent_chat(producer["id"]),
         "weekly_summary": None,
         "last_user_message": last_user_message,
     }
@@ -158,7 +284,7 @@ def call_groq(role: str, context: dict[str, Any]) -> dict[str, Any]:
         ],
         "response_format": {"type": "json_object"},
         "temperature": 0.2,
-        "max_tokens": 300,
+        "max_tokens": get_agent_config(role)["max_tokens"],
     }
     response = requests.post(GROQ_API_URL, headers=headers, json=payload, timeout=60)
     response.raise_for_status()
@@ -175,17 +301,64 @@ def run_mml(role: str, context: dict[str, Any]) -> dict[str, Any]:
     return mock_mml_response(role)
 
 
+def get_agent_config(role: str) -> dict[str, Any]:
+    db = get_db()
+    row = db.execute("SELECT * FROM agent_configs WHERE role = ?", (role,)).fetchone()
+    if row:
+        return dict(row)
+    return {"role": role, "enabled": 1, "prompt": PROMPTS[role], "max_tokens": 300}
+
+
 def apply_model_actions(phone: str, model_output: dict[str, Any]) -> dict[str, Any]:
+    producer = get_or_create_producer(phone)
+    form = get_or_create_form(producer["id"])
     actions = model_output.get("acciones", {})
     updates = actions.get("actualizar_formulario", {})
     if updates:
-        form = get_form_state(phone)
-        for key, value in updates.items():
+        db = get_db()
+        valid = {
+            "cultivo": updates.get("cultivo"),
+            "sintoma": updates.get("sintoma"),
+            "inicio_problema": updates.get("inicio_problema"),
+            "foto_recibida": updates.get("foto_recibida"),
+        }
+        for key, value in valid.items():
             if value is not None:
                 form[key] = value
+        db.execute(
+            """
+            UPDATE forms
+            SET cultivo = ?, sintoma = ?, inicio_problema = ?, foto_recibida = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (
+                form.get("cultivo"),
+                form.get("sintoma"),
+                form.get("inicio_problema"),
+                int(bool(form.get("foto_recibida"))),
+                utc_now(),
+                form["id"],
+            ),
+        )
+        db.commit()
     alert = actions.get("alerta")
     if alert:
-        ALERTS.append({"phone": phone, "alert": alert, "time": utc_now()})
+        db = get_db()
+        db.execute(
+            """
+            INSERT INTO alerts (producer_id, level, reason, action, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                producer["id"],
+                alert.get("nivel", "medio"),
+                alert.get("motivo", "sin motivo"),
+                alert.get("accion_recomendada", "sin accion"),
+                "abierta",
+                utc_now(),
+            ),
+        )
+        db.commit()
     return model_output
 
 
@@ -207,20 +380,27 @@ def agent() -> Any:
     if not phone:
         return jsonify({"error": "phone requerido"}), 400
 
-    MESSAGES.append({"phone": phone, "from": "user", "text": message, "time": utc_now()})
+    producer = get_or_create_producer(phone)
+    db = get_db()
+    db.execute(
+        "INSERT INTO messages (producer_id, direction, content, created_at) VALUES (?, ?, ?, ?)",
+        (producer["id"], "usuario", message, utc_now()),
+    )
+    db.commit()
 
     context = build_context(role, phone, message)
+    agent_config = get_agent_config(role)
+    if not agent_config.get("enabled"):
+        return jsonify({"error": f"agente {role} desactivado"}), 403
+
     model_output = run_mml(role, context)
     model_output = apply_model_actions(phone, model_output)
 
-    MESSAGES.append(
-        {
-            "phone": phone,
-            "from": "assistant",
-            "text": model_output["respuesta_chat"],
-            "time": utc_now(),
-        }
+    db.execute(
+        "INSERT INTO messages (producer_id, direction, content, created_at) VALUES (?, ?, ?, ?)",
+        (producer["id"], "asistente", model_output["respuesta_chat"], utc_now()),
     )
+    db.commit()
 
     return jsonify({"context": context, "model_output": model_output})
 
@@ -234,11 +414,28 @@ def update_form() -> Any:
     if not phone:
         return jsonify({"error": "phone requerido"}), 400
 
-    form = get_form_state(phone)
+    producer = get_or_create_producer(phone)
+    form = get_or_create_form(producer["id"])
     for key, value in updates.items():
         if value is not None:
             form[key] = value
-
+    db = get_db()
+    db.execute(
+        """
+        UPDATE forms
+        SET cultivo = ?, sintoma = ?, inicio_problema = ?, foto_recibida = ?, updated_at = ?
+        WHERE id = ?
+        """,
+        (
+            form.get("cultivo"),
+            form.get("sintoma"),
+            form.get("inicio_problema"),
+            int(bool(form.get("foto_recibida"))),
+            utc_now(),
+            form["id"],
+        ),
+    )
+    db.commit()
     return jsonify({"status": "ok", "form_state": form})
 
 
@@ -251,10 +448,151 @@ def create_alert() -> Any:
     if not phone or not alert:
         return jsonify({"error": "phone y alert requeridos"}), 400
 
-    record = {"phone": phone, "alert": alert, "time": utc_now()}
-    ALERTS.append(record)
-    return jsonify({"status": "ok", "alert": record})
+    producer = get_or_create_producer(phone)
+    db = get_db()
+    db.execute(
+        """
+        INSERT INTO alerts (producer_id, level, reason, action, status, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (
+            producer["id"],
+            alert.get("nivel", "medio"),
+            alert.get("motivo", "sin motivo"),
+            alert.get("accion_recomendada", "sin accion"),
+            "abierta",
+            utc_now(),
+        ),
+    )
+    db.commit()
+    return jsonify({"status": "ok"})
+
+
+@app.get("/admin")
+def admin_dashboard() -> Any:
+    db = get_db()
+    counts = {
+        "producers": db.execute("SELECT COUNT(*) FROM producers").fetchone()[0],
+        "forms": db.execute("SELECT COUNT(*) FROM forms").fetchone()[0],
+        "alerts": db.execute("SELECT COUNT(*) FROM alerts").fetchone()[0],
+        "messages": db.execute("SELECT COUNT(*) FROM messages").fetchone()[0],
+    }
+    return render_template("dashboard.html", counts=counts)
+
+
+@app.get("/admin/agents")
+def admin_agents() -> Any:
+    db = get_db()
+    rows = db.execute("SELECT * FROM agent_configs ORDER BY role").fetchall()
+    return render_template("agents.html", agents=rows)
+
+
+@app.post("/admin/agents/<role>")
+def admin_agents_update(role: str) -> Any:
+    db = get_db()
+    enabled = 1 if request.form.get("enabled") == "on" else 0
+    prompt = request.form.get("prompt", "").strip() or PROMPTS.get(role, "")
+    max_tokens = int(request.form.get("max_tokens", 300))
+    db.execute(
+        """
+        UPDATE agent_configs
+        SET enabled = ?, prompt = ?, max_tokens = ?
+        WHERE role = ?
+        """,
+        (enabled, prompt, max_tokens, role),
+    )
+    db.commit()
+    return redirect(url_for("admin_agents"))
+
+
+@app.get("/admin/forms")
+def admin_forms() -> Any:
+    db = get_db()
+    rows = db.execute(
+        """
+        SELECT forms.*, producers.phone
+        FROM forms
+        JOIN producers ON producers.id = forms.producer_id
+        ORDER BY forms.created_at DESC
+        """
+    ).fetchall()
+    return render_template("forms.html", forms=rows)
+
+
+@app.get("/admin/forms/<int:form_id>")
+def admin_form_detail(form_id: int) -> Any:
+    db = get_db()
+    row = db.execute(
+        """
+        SELECT forms.*, producers.phone
+        FROM forms
+        JOIN producers ON producers.id = forms.producer_id
+        WHERE forms.id = ?
+        """,
+        (form_id,),
+    ).fetchone()
+    return render_template("form_detail.html", form=row)
+
+
+@app.post("/admin/forms/<int:form_id>/status")
+def admin_form_status(form_id: int) -> Any:
+    status = request.form.get("status", "abierto")
+    db = get_db()
+    db.execute(
+        "UPDATE forms SET status = ?, updated_at = ? WHERE id = ?",
+        (status, utc_now(), form_id),
+    )
+    db.commit()
+    return redirect(url_for("admin_form_detail", form_id=form_id))
+
+
+@app.get("/admin/alerts")
+def admin_alerts() -> Any:
+    db = get_db()
+    rows = db.execute(
+        """
+        SELECT alerts.*, producers.phone
+        FROM alerts
+        JOIN producers ON producers.id = alerts.producer_id
+        ORDER BY alerts.created_at DESC
+        """
+    ).fetchall()
+    return render_template("alerts.html", alerts=rows)
+
+
+@app.get("/admin/alerts/<int:alert_id>")
+def admin_alert_detail(alert_id: int) -> Any:
+    db = get_db()
+    row = db.execute(
+        """
+        SELECT alerts.*, producers.phone
+        FROM alerts
+        JOIN producers ON producers.id = alerts.producer_id
+        WHERE alerts.id = ?
+        """,
+        (alert_id,),
+    ).fetchone()
+    return render_template("alert_detail.html", alert=row)
+
+
+@app.post("/admin/alerts/<int:alert_id>/status")
+def admin_alert_status(alert_id: int) -> Any:
+    status = request.form.get("status", "abierta")
+    db = get_db()
+    db.execute("UPDATE alerts SET status = ? WHERE id = ?", (status, alert_id))
+    db.commit()
+    return redirect(url_for("admin_alert_detail", alert_id=alert_id))
+
+
+@app.teardown_appcontext
+def close_db(exception: Exception | None) -> None:
+    db = g.pop("db", None)
+    if db is not None:
+        db.close()
 
 
 if __name__ == "__main__":
+    init_db()
+    with app.app_context():
+        ensure_agent_defaults()
     app.run(host="0.0.0.0", port=5000, debug=True)

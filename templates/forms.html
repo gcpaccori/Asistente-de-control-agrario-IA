@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Formularios</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Productor</th>
+        <th>Estado</th>
+        <th>Cultivo</th>
+        <th>Síntoma</th>
+        <th>Actualizado</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for form in forms %}
+        <tr>
+          <td><a href="{{ url_for('admin_form_detail', form_id=form.id) }}">{{ form.id }}</a></td>
+          <td>{{ form.phone }}</td>
+          <td><span class="badge">{{ form.status }}</span></td>
+          <td>{{ form.cultivo or "-" }}</td>
+          <td>{{ form.sintoma or "-" }}</td>
+          <td>{{ form.updated_at }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

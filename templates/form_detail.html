@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Formulario #{{ form.id }}</h1>
+  <div class="card">
+    <p><strong>Productor:</strong> {{ form.phone }}</p>
+    <p><strong>Estado:</strong> {{ form.status }}</p>
+    <p><strong>Cultivo:</strong> {{ form.cultivo or "-" }}</p>
+    <p><strong>Síntoma:</strong> {{ form.sintoma or "-" }}</p>
+    <p><strong>Inicio:</strong> {{ form.inicio_problema or "-" }}</p>
+    <p><strong>Foto recibida:</strong> {{ "Sí" if form.foto_recibida else "No" }}</p>
+    <p><strong>Creado:</strong> {{ form.created_at }}</p>
+    <p><strong>Actualizado:</strong> {{ form.updated_at }}</p>
+  </div>
+  <div class="card">
+    <form method="post" action="{{ url_for('admin_form_status', form_id=form.id) }}">
+      <label>Estado</label>
+      <select name="status">
+        <option value="abierto" {% if form.status == "abierto" %}selected{% endif %}>Abierto</option>
+        <option value="en_revision" {% if form.status == "en_revision" %}selected{% endif %}>En revisión</option>
+        <option value="cerrado" {% if form.status == "cerrado" %}selected{% endif %}>Cerrado</option>
+      </select>
+      <button class="btn" type="submit">Actualizar estado</button>
+    </form>
+  </div>
+{% endblock %}
