@@ -52,12 +52,22 @@ Desde el panel puedes:
 ## Modelo (Groq opcional)
 Por defecto el servidor usa un **mock**. Para usar Groq:
 
+Puedes usar variables de entorno o un archivo `.env` en la raíz del proyecto.
+
+**Opción 1: variables de entorno**
 ```bash
 export MML_PROVIDER=groq
 export GROQ_API_KEY="tu_api_key"
 # Alternativa si tu plataforma expone la clave con este nombre:
 # export console.groq.com_apikey="tu_api_key"
 export GROQ_MODEL="llama-3.1-8b-instant"
+python app.py
+```
+
+**Opción 2: archivo .env**
+Copia `.env.example` a `.env` y reemplaza los valores:
+```bash
+cp .env.example .env
 python app.py
 ```
 
