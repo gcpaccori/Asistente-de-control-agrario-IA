@@ -34,9 +34,8 @@ def load_env_file() -> None:
 
 load_env_file()
 
-GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
 XAI_MODEL = os.getenv("XAI_MODEL", "grok-4-latest")
-MML_PROVIDER = os.getenv("MML_PROVIDER", "groq")
+MML_PROVIDER = os.getenv("MML_PROVIDER", "xai")
 
 PROMPTS = {
     "formulario": (
@@ -289,34 +288,6 @@ def build_context(role: str, phone: str, last_user_message: str) -> dict[str, An
     return context
 
 
-def call_groq(role: str, context: dict[str, Any]) -> dict[str, Any]:
-    api_key = os.getenv("GROQ_API_KEY") or os.environ.get("console.groq.com_apikey")
-    if not api_key:
-        raise RuntimeError("Falta GROQ_API_KEY para conectar con Groq.")
-
-    agent_config = get_agent_config(role)
-    client = OpenAI(
-        api_key=api_key,
-        base_url="https://api.groq.com/openai/v1",
-    )
-    try:
-        response = client.chat.completions.create(
-            messages=[
-                {"role": "system", "content": agent_config["prompt"]},
-                {"role": "user", "content": json.dumps(context, ensure_ascii=False)},
-            ],
-            model=GROQ_MODEL,
-            response_format={"type": "json_object"},
-            temperature=0.2,
-            max_tokens=agent_config["max_tokens"],
-        )
-        return json.loads(response.choices[0].message.content or "{}")
-    except json.JSONDecodeError as exc:
-        raise RuntimeError("Respuesta inválida desde Groq (JSON mal formado).") from exc
-    except OpenAIError as exc:
-        raise RuntimeError(f"Error al conectar con Groq: {exc}") from exc
-
-
 def call_xai(role: str, context: dict[str, Any]) -> dict[str, Any]:
     api_key = os.getenv("XAI_API_KEY")
     if not api_key:
@@ -346,11 +317,9 @@ def call_xai(role: str, context: dict[str, Any]) -> dict[str, Any]:
 
 
 def run_mml(role: str, context: dict[str, Any]) -> dict[str, Any]:
-    if MML_PROVIDER == "groq":
-        return call_groq(role, context)
     if MML_PROVIDER == "xai":
         return call_xai(role, context)
-    raise RuntimeError("MML_PROVIDER debe ser 'groq' o 'xai' para usar el servicio real.")
+    raise RuntimeError("MML_PROVIDER debe ser 'xai' para usar el servicio real.")
 
 
 def get_agent_config(role: str) -> dict[str, Any]:
