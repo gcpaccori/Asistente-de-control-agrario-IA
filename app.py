@@ -299,19 +299,21 @@ def call_groq(role: str, context: dict[str, Any]) -> dict[str, Any]:
         base_url="https://api.groq.com/openai/v1",
     )
     try:
-        response = client.responses.create(
-            input=[
+        response = client.chat.completions.create(
+            messages=[
                 {"role": "system", "content": agent_config["prompt"]},
                 {"role": "user", "content": json.dumps(context, ensure_ascii=False)},
             ],
             model=GROQ_MODEL,
             response_format={"type": "json_object"},
             temperature=0.2,
-            max_output_tokens=agent_config["max_tokens"],
+            max_tokens=agent_config["max_tokens"],
         )
-        return json.loads(response.output_text)
-    except (json.JSONDecodeError, OpenAIError) as exc:
-        raise RuntimeError("Error al conectar con Groq.") from exc
+        return json.loads(response.choices[0].message.content or "{}")
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("Respuesta inválida desde Groq (JSON mal formado).") from exc
+    except OpenAIError as exc:
+        raise RuntimeError(f"Error al conectar con Groq: {exc}") from exc
 
 
 def run_mml(role: str, context: dict[str, Any]) -> dict[str, Any]:
