@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Panel de administración</h1>
+  <div class="grid">
+    <div class="card">
+      <div class="small">Productores</div>
+      <h2>{{ counts.producers }}</h2>
+    </div>
+    <div class="card">
+      <div class="small">Formularios</div>
+      <h2>{{ counts.forms }}</h2>
+    </div>
+    <div class="card">
+      <div class="small">Alertas</div>
+      <h2>{{ counts.alerts }}</h2>
+    </div>
+    <div class="card">
+      <div class="small">Mensajes</div>
+      <h2>{{ counts.messages }}</h2>
+    </div>
+  </div>
+  <div class="card">
+    <p>Usa el menú superior para administrar agentes, formularios y alertas.</p>
+  </div>
+{% endblock %}

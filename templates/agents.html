@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Configuración de agentes</h1>
+  {% for agent in agents %}
+    <div class="card">
+      <h2>{{ agent.role }}</h2>
+      <p class="small">{{ agent.description }}</p>
+      <form method="post" action="{{ url_for('admin_agents_update', role=agent.role) }}">
+        <label>
+          <input type="checkbox" name="enabled" {% if agent.enabled %}checked{% endif %} />
+          Activo
+        </label>
+        <div class="small">Tokens máximos</div>
+        <input type="number" name="max_tokens" value="{{ agent.max_tokens }}" min="50" max="800" />
+        <div class="small">Prompt</div>
+        <textarea name="prompt">{{ agent.prompt }}</textarea>
+        <button class="btn" type="submit">Guardar</button>
+      </form>
+    </div>
+  {% endfor %}
+{% endblock %}

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>{{ title or "Admin IA Agraria" }}</title>
+    <style>
+      body { font-family: Arial, sans-serif; background:#f6f7f9; margin:0; }
+      header { background:#1f6f54; color:white; padding:16px 24px; }
+      nav a { color:white; margin-right:16px; text-decoration:none; font-weight:600; }
+      main { padding:24px; }
+      table { width:100%; border-collapse:collapse; background:white; }
+      th, td { padding:10px; border-bottom:1px solid #e4e7eb; text-align:left; }
+      th { background:#f0f2f5; }
+      .card { background:white; padding:16px; border-radius:8px; margin-bottom:16px; }
+      .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px; }
+      .badge { padding:2px 8px; border-radius:12px; background:#e0f2e9; color:#1f6f54; }
+      .btn { padding:8px 12px; border:none; border-radius:6px; background:#1f6f54; color:white; cursor:pointer; }
+      .btn.secondary { background:#6b7280; }
+      textarea { width:100%; height:120px; }
+      input[type="text"], input[type="number"] { width:100%; padding:6px; }
+      .small { font-size:12px; color:#6b7280; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <nav>
+        <a href="{{ url_for('admin_dashboard') }}">Panel</a>
+        <a href="{{ url_for('admin_agents') }}">Agentes</a>
+        <a href="{{ url_for('admin_producers') }}">Productores</a>
+        <a href="{{ url_for('admin_forms') }}">Formularios</a>
+        <a href="{{ url_for('admin_alerts') }}">Alertas</a>
+      </nav>
+    </header>
+    <main>
+      {% block content %}{% endblock %}
+    </main>
+  </body>
+</html>

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Alertas</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Productor</th>
+        <th>Nivel</th>
+        <th>Motivo</th>
+        <th>Estado</th>
+        <th>Fecha</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for alert in alerts %}
+        <tr>
+          <td><a href="{{ url_for('admin_alert_detail', alert_id=alert.id) }}">{{ alert.id }}</a></td>
+          <td>{{ alert.phone }}</td>
+          <td>{{ alert.level }}</td>
+          <td>{{ alert.reason }}</td>
+          <td><span class="badge">{{ alert.status }}</span></td>
+          <td>{{ alert.created_at }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}
