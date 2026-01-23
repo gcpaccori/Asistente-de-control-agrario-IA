@@ -481,7 +481,7 @@ def build_tasks_from_template(
 
 def assign_plan_to_producer(
     producer_id: int, template_id: int, start_date_str: str
-) -> None:
+) -> int:
     db = get_db()
     template = db.execute(
         "SELECT * FROM plan_templates WHERE id = ?", (template_id,)
@@ -489,6 +489,28 @@ def assign_plan_to_producer(
     if not template:
         raise RuntimeError("Plantilla de plan no encontrada.")
     start_date = date.fromisoformat(start_date_str)
+    template = dict(template)
+    plan_name = f"Plan {template['crop_type']}"
+    plan_row = db.execute(
+        """
+        INSERT INTO plans (name, description, targets_json, created_at)
+        VALUES (?, ?, ?, ?)
+        """,
+        (
+            plan_name,
+            f"Plan generado desde plantilla {template_id}",
+            json.dumps({}),
+            utc_now(),
+        ),
+    )
+    plan_id = plan_row.lastrowid
+    db.execute(
+        """
+        INSERT INTO producer_plans (producer_id, plan_id, start_date, status, created_at)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (producer_id, plan_id, start_date_str, "activo", utc_now()),
+    )
     tasks = build_tasks_from_template(dict(template), start_date)
     now = utc_now()
     for task in tasks:
@@ -516,6 +538,7 @@ def assign_plan_to_producer(
             ),
         )
     db.commit()
+    return int(plan_id)
 
 
 def update_task_status(
@@ -560,9 +583,16 @@ def update_task_status(
                     SET estimated_date = date(estimated_date, ? || ' days'),
                         updated_at = ?
                     WHERE producer_id = ?
+                      AND template_id = ?
                       AND order_sequence > ?
                     """,
-                    (delay_days, utc_now(), task["producer_id"], task["order_sequence"]),
+                    (
+                        delay_days,
+                        utc_now(),
+                        task["producer_id"],
+                        task["template_id"],
+                        task["order_sequence"],
+                    ),
                 )
     db.commit()
 
