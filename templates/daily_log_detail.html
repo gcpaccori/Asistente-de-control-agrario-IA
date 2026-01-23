@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Editar bitácora</h1>
+  <div class="card">
+    <form method="post" action="{{ url_for('admin_daily_log_update', log_id=log.id) }}">
+      <div class="input-row">
+        <div>
+          <label>Fecha</label>
+          <input type="date" name="log_date" value="{{ log.log_date }}" />
+        </div>
+        <div>
+          <label>Tipo</label>
+          <select name="log_type_id">
+            <option value="">Sin tipo</option>
+            {% for log_type in log_types %}
+              <option value="{{ log_type.id }}" {% if log.log_type_id == log_type.id %}selected{% endif %}>{{ log_type.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <label>Notas</label>
+      <textarea name="notes">{{ log.notes }}</textarea>
+      <label>Métricas (JSON)</label>
+      <textarea name="metrics_json">{{ log.metrics_json }}</textarea>
+      <button class="btn" type="submit">Guardar</button>
+      <a class="btn secondary" href="{{ url_for('admin_producer_detail', producer_id=log.producer_id) }}">Volver</a>
+    </form>
+  </div>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Bitácora del productor #{{ producer.id }}</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>Fecha</th>
+        <th>Tipo</th>
+        <th>Notas</th>
+        <th>Métricas</th>
+        <th>Editar</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for log in daily_logs %}
+        <tr>
+          <td>{{ log.log_date }}</td>
+          <td>{{ log.log_type_name or "Sin tipo" }}</td>
+          <td>{{ log.notes }}</td>
+          <td class="small">{{ log.metrics_json }}</td>
+          <td><a class="btn secondary" href="{{ url_for('admin_daily_log_detail', log_id=log.id) }}">Editar</a></td>
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="5" class="muted">Sin registros.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <a class="btn secondary" href="{{ url_for('admin_producer_detail', producer_id=producer.id) }}">Volver</a>
+{% endblock %}

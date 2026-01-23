@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Tareas del productor #{{ producer.id }}</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>Orden</th>
+        <th>Tarea</th>
+        <th>Estado</th>
+        <th>Fecha estimada</th>
+        <th>Completada</th>
+        <th>Avance</th>
+        <th>Motivo bloqueo</th>
+        <th>Actualizar</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for task in tasks %}
+        <tr>
+          <td>{{ task.order_sequence }}</td>
+          <td>{{ task.task_name }}</td>
+          <td>{{ task.status }}</td>
+          <td>{{ task.estimated_date or "-" }}</td>
+          <td>{{ task.completion_date or "-" }}</td>
+          <td>{{ task.progress_pct or 0 }}%</td>
+          <td>{{ task.blocker_reason or "-" }}</td>
+          <td>
+            <form method="post" action="{{ url_for('admin_task_update', task_id=task.id) }}">
+              <div class="input-row">
+                <div>
+                  <select name="status">
+                    {% for value in ["PENDIENTE", "EN_PROGRESO", "BLOQUEADO", "COMPLETADO", "OMITIDO"] %}
+                      <option value="{{ value }}" {% if task.status == value %}selected{% endif %}>{{ value }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div>
+                  <input type="number" name="progress_pct" min="0" max="100" value="{{ task.progress_pct or '' }}" />
+                </div>
+                <div>
+                  <input type="text" name="blocker_reason" value="{{ task.blocker_reason or '' }}" />
+                </div>
+              </div>
+              <button class="btn" type="submit">Guardar</button>
+            </form>
+          </td>
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="8" class="muted">Sin tareas asignadas.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <a class="btn secondary" href="{{ url_for('admin_producer_detail', producer_id=producer.id) }}">Volver</a>
+{% endblock %}

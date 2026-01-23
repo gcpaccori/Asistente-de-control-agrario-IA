@@ -5,10 +5,27 @@
     <form method="post" action="{{ url_for('admin_producer_update', producer_id=producer.id) }}">
       <div class="small">Teléfono</div>
       <div><strong>{{ producer.phone }}</strong></div>
-      <div class="small">Nombre</div>
-      <input type="text" name="name" value="{{ producer.name or '' }}" />
-      <div class="small">Zona</div>
-      <input type="text" name="zone" value="{{ producer.zone or '' }}" />
+      <div class="input-row">
+        <div>
+          <div class="small">Nombre</div>
+          <input type="text" name="name" value="{{ producer.name or '' }}" />
+        </div>
+        <div>
+          <div class="small">Zona</div>
+          <input type="text" name="zone" value="{{ producer.zone or '' }}" />
+        </div>
+        <div>
+          <div class="small">Zona horaria</div>
+          <input type="text" name="timezone" value="{{ producer.timezone or 'America/Lima' }}" />
+        </div>
+        <div>
+          <div class="small">Estado</div>
+          <select name="status">
+            <option value="activo" {% if producer.status == "activo" %}selected{% endif %}>Activo</option>
+            <option value="inactivo" {% if producer.status != "activo" %}selected{% endif %}>Inactivo</option>
+          </select>
+        </div>
+      </div>
       <div class="small">Rol asignado</div>
       <select name="assigned_role">
         <option value="" {% if not producer.assigned_role %}selected{% endif %}>Sin asignar</option>
@@ -38,6 +55,92 @@
       </div>
       <button class="btn" type="submit">Guardar</button>
     </form>
+  </div>
+
+  <div class="card">
+    <h2>Plan y tareas</h2>
+    <div class="table-actions">
+      <a class="btn secondary" href="{{ url_for('admin_producer_tasks', producer_id=producer.id) }}">Ver tareas</a>
+      <a class="btn secondary" href="{{ url_for('admin_daily_logs', producer_id=producer.id) }}">Ver bitácora</a>
+    </div>
+    <form method="post" action="{{ url_for('admin_plan_assign') }}">
+      <input type="hidden" name="producer_id" value="{{ producer.id }}" />
+      <div class="input-row">
+        <div>
+          <div class="small">Plantilla</div>
+          <select name="template_id">
+            {% for template in templates %}
+              <option value="{{ template.id }}">{{ template.crop_type }} (ID {{ template.id }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <div class="small">Fecha inicio</div>
+          <input type="date" name="start_date" required />
+        </div>
+      </div>
+      <button class="btn" type="submit">Asignar plan al productor</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Bitácora reciente</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Tipo</th>
+          <th>Notas</th>
+          <th>Métricas</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in daily_logs %}
+          <tr>
+            <td><a href="{{ url_for('admin_daily_log_detail', log_id=log.id) }}">{{ log.log_date }}</a></td>
+            <td>{{ log.log_type_name or "Sin tipo" }}</td>
+            <td>{{ log.notes }}</td>
+            <td class="small">{{ log.metrics_json }}</td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="4" class="muted">Sin registros de bitácora.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Tareas asignadas</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Tarea</th>
+          <th>Estado</th>
+          <th>Fecha estimada</th>
+          <th>Avance</th>
+          <th>Motivo bloqueo</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for task in tasks %}
+          <tr>
+            <td>{{ task.order_sequence }}</td>
+            <td>{{ task.task_name }}</td>
+            <td>{{ task.status }}</td>
+            <td>{{ task.estimated_date or "-" }}</td>
+            <td>{{ task.progress_pct or 0 }}%</td>
+            <td>{{ task.blocker_reason or "-" }}</td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="6" class="muted">Sin tareas asignadas.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
 
   <div class="card">
