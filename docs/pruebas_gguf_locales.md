@@ -1,4 +1,4 @@
-# Pruebas locales GGUF (Qwen2.5-0.5B-Instruct Q4_K_M)
+# Pruebas locales GGUF (Qwen2.5-3B-Instruct Q4_K_M)
 
 Estas pruebas se ejecutaron con `llama-cpp-python` en CPU (n_ctx=2048, n_threads=4).
 
@@ -83,4 +83,3 @@ Un modelo GGUF es un tipo de modelo de aprendizaje automático que se basa en la
 
 3. **Define el precio**: Se debe definir el precio del producto, si es una marca, un producto específico, o un
 ```
-

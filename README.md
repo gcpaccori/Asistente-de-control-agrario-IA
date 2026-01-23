@@ -56,10 +56,9 @@ cuantizado. Descarga el modelo y valida la carga con el script incluido:
 ```bash
 pip install -r requirements.txt
 mkdir -p models
-wget -O models/qwen2.5-0.5b-instruct-q4_k_m.gguf \\
-  https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf
+wget -O models/qwen2.5-3b-instruct-q4_k_m.gguf \\
+  https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/main/qwen2.5-3b-instruct-q4_k_m.gguf
 N_CTX=2048 N_THREADS=1 python validate_local_gguf.py
-python validate_local_gguf.py
 ```
 
 Las salidas de pruebas adicionales (3 por rol) se registran en:

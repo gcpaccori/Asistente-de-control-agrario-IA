@@ -1,6 +1,6 @@
 # QA del modelo local GGUF
 
-Ejecutado con Qwen2.5-0.5B-Instruct Q4_K_M, n_ctx=2048, n_threads=4.
+Ejecutado con Qwen2.5-3B-Instruct Q4_K_M, n_ctx=2048, n_threads=4.
 
 ## qa_whatsapp_viability
 
@@ -27,4 +27,3 @@ No, este modelo local no puede ser considerado como un mini GPT para responder p
 2. 128 KB de RAM
 3. 128 KB de ROM
 ```
-
