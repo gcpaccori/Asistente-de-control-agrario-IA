@@ -1,1 +1,6 @@
 .env
+models/
+*.gguf
+__pycache__/
+instance/
+whatsapp/node_modules/
