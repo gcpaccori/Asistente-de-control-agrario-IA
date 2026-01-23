@@ -8,7 +8,7 @@ import json
 import os
 import sqlite3
 from flask import Flask, g, jsonify, redirect, render_template, request, url_for
-from openai import OpenAI, OpenAIError
+from llama_cpp import Llama
 
 BASE_DIR = Path(__file__).resolve().parent
 INSTANCE_DIR = BASE_DIR / "instance"
@@ -34,8 +34,11 @@ def load_env_file() -> None:
 
 load_env_file()
 
-XAI_MODEL = os.getenv("XAI_MODEL", "grok-4-latest")
-MML_PROVIDER = os.getenv("MML_PROVIDER", "xai")
+LOCAL_MODEL_PATH = os.getenv(
+    "LOCAL_MODEL_PATH", str(BASE_DIR / "models/qwen2.5-3b-instruct-q4_k_m.gguf")
+)
+N_CTX = int(os.getenv("N_CTX", "2048"))
+N_THREADS = int(os.getenv("N_THREADS", "1"))
 
 PROMPTS = {
     "formulario": (
@@ -86,6 +89,7 @@ def init_db() -> None:
             preferred_language TEXT NOT NULL,
             main_crops TEXT,
             allowed INTEGER NOT NULL,
+            status TEXT NOT NULL,
             assigned_role TEXT,
             enable_formulario INTEGER NOT NULL,
             enable_consulta INTEGER NOT NULL,
@@ -133,6 +137,7 @@ def init_db() -> None:
             producer_id INTEGER NOT NULL,
             direction TEXT NOT NULL,
             content TEXT NOT NULL,
+            status TEXT NOT NULL,
             created_at TEXT NOT NULL,
             FOREIGN KEY (producer_id) REFERENCES producers (id)
         );
@@ -152,6 +157,10 @@ def migrate_db() -> None:
         db.execute("ALTER TABLE producers ADD COLUMN name TEXT")
     if "allowed" not in columns:
         db.execute("ALTER TABLE producers ADD COLUMN allowed INTEGER NOT NULL DEFAULT 0")
+    if "status" not in columns:
+        db.execute(
+            "ALTER TABLE producers ADD COLUMN status TEXT NOT NULL DEFAULT 'activo'"
+        )
     if "assigned_role" not in columns:
         db.execute("ALTER TABLE producers ADD COLUMN assigned_role TEXT")
     if "enable_formulario" not in columns:
@@ -174,6 +183,14 @@ def migrate_db() -> None:
         db.execute("ALTER TABLE alerts ADD COLUMN message TEXT NOT NULL DEFAULT ''")
     if "sent_at" not in alert_columns:
         db.execute("ALTER TABLE alerts ADD COLUMN sent_at TEXT")
+
+    message_columns = {
+        row["name"] for row in db.execute("PRAGMA table_info(messages)").fetchall()
+    }
+    if "status" not in message_columns:
+        db.execute(
+            "ALTER TABLE messages ADD COLUMN status TEXT NOT NULL DEFAULT 'entregado'"
+        )
 
     db.commit()
     db.close()
@@ -206,12 +223,12 @@ def get_or_create_producer(phone: str) -> dict[str, Any]:
     db.execute(
         """
         INSERT INTO producers (
-            phone, name, zone, preferred_language, main_crops, allowed, assigned_role,
-            enable_formulario, enable_consulta, enable_intervencion, created_at
+            phone, name, zone, preferred_language, main_crops, allowed, status,
+            assigned_role, enable_formulario, enable_consulta, enable_intervencion, created_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        (phone, None, None, "es", json.dumps([]), 0, None, 1, 1, 1, now),
+        (phone, None, None, "es", json.dumps([]), 0, "activo", None, 1, 1, 1, now),
     )
     db.commit()
     row = db.execute("SELECT * FROM producers WHERE phone = ?", (phone,)).fetchone()
@@ -288,38 +305,41 @@ def build_context(role: str, phone: str, last_user_message: str) -> dict[str, An
     return context
 
 
-def call_xai(role: str, context: dict[str, Any]) -> dict[str, Any]:
-    api_key = os.getenv("XAI_API_KEY")
-    if not api_key:
-        raise RuntimeError("Falta XAI_API_KEY para conectar con xAI.")
-
-    agent_config = get_agent_config(role)
-    client = OpenAI(
-        api_key=api_key,
-        base_url="https://api.x.ai/v1",
-    )
-    try:
-        response = client.chat.completions.create(
-            messages=[
-                {"role": "system", "content": agent_config["prompt"]},
-                {"role": "user", "content": json.dumps(context, ensure_ascii=False)},
-            ],
-            model=XAI_MODEL,
-            response_format={"type": "json_object"},
-            temperature=0.2,
-            max_tokens=agent_config["max_tokens"],
-        )
-        return json.loads(response.choices[0].message.content or "{}")
-    except json.JSONDecodeError as exc:
-        raise RuntimeError("Respuesta inválida desde xAI (JSON mal formado).") from exc
-    except OpenAIError as exc:
-        raise RuntimeError(f"Error al conectar con xAI: {exc}") from exc
-
-
 def run_mml(role: str, context: dict[str, Any]) -> dict[str, Any]:
-    if MML_PROVIDER == "xai":
-        return call_xai(role, context)
-    raise RuntimeError("MML_PROVIDER debe ser 'xai' para usar el servicio real.")
+    agent_config = get_agent_config(role)
+    system_prompt = agent_config["prompt"]
+    llm = get_local_llm()
+    response = llm.create_chat_completion(
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": json.dumps(context, ensure_ascii=False)},
+        ],
+        temperature=0.2,
+        max_tokens=agent_config["max_tokens"],
+    )
+    content = response["choices"][0]["message"]["content"] or "{}"
+    try:
+        return json.loads(content)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("Respuesta inválida desde el modelo local.") from exc
+
+
+_LOCAL_LLM: Llama | None = None
+
+
+def get_local_llm() -> Llama:
+    global _LOCAL_LLM
+    if _LOCAL_LLM is None:
+        if not Path(LOCAL_MODEL_PATH).exists():
+            raise RuntimeError(
+                f"No se encontró el modelo local en {LOCAL_MODEL_PATH}."
+            )
+        _LOCAL_LLM = Llama(
+            model_path=LOCAL_MODEL_PATH,
+            n_ctx=N_CTX,
+            n_threads=N_THREADS,
+        )
+    return _LOCAL_LLM
 
 
 def get_agent_config(role: str) -> dict[str, Any]:
@@ -406,8 +426,11 @@ def agent() -> Any:
 
     db = get_db()
     db.execute(
-        "INSERT INTO messages (producer_id, direction, content, created_at) VALUES (?, ?, ?, ?)",
-        (producer["id"], "usuario", message, utc_now()),
+        """
+        INSERT INTO messages (producer_id, direction, content, status, created_at)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (producer["id"], "usuario", message, "recibido", utc_now()),
     )
     db.commit()
 
@@ -415,6 +438,8 @@ def agent() -> Any:
     agent_config = get_agent_config(role)
     if not producer.get("allowed"):
         return jsonify({"error": "productor no autorizado"}), 403
+    if producer.get("status") != "activo":
+        return jsonify({"error": "productor inactivo"}), 403
     if not agent_config.get("enabled"):
         return jsonify({"error": f"agente {role} desactivado"}), 403
     if role == "formulario" and not producer.get("enable_formulario"):
@@ -428,8 +453,11 @@ def agent() -> Any:
     model_output = apply_model_actions(phone, model_output)
 
     db.execute(
-        "INSERT INTO messages (producer_id, direction, content, created_at) VALUES (?, ?, ?, ?)",
-        (producer["id"], "asistente", model_output["respuesta_chat"], utc_now()),
+        """
+        INSERT INTO messages (producer_id, direction, content, status, created_at)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        (producer["id"], "asistente", model_output["respuesta_chat"], "enviado", utc_now()),
     )
     db.commit()
 
