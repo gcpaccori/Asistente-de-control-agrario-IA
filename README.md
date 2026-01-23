@@ -49,6 +49,9 @@ Desde el panel puedes:
 - Registrar productores autorizados y asignar roles por productor.
 - Ver historial y análisis reciente por productor.
 
+## Contrato MML (JSON)
+El contrato completo está en `docs/contrato-mml.md`.
+
 ## Modelo local (GGUF)
 Para pruebas locales en CPU usamos `llama-cpp-python` con un modelo GGUF
 cuantizado. Descarga el modelo y valida la carga con el script incluido:
@@ -60,13 +63,6 @@ wget -O models/qwen2.5-3b-instruct-q4_k_m.gguf \\
   https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/main/qwen2.5-3b-instruct-q4_k_m.gguf
 N_CTX=2048 N_THREADS=1 python validate_local_gguf.py
 ```
-
-Las salidas de pruebas adicionales (3 por rol) se registran en:
-`docs/pruebas_gguf_locales.md`.
-Las pruebas de QA rápidas sobre el modelo local están en:
-`docs/qa_gguf_local.md`.
-Un flujo real (pregunta del productor y respuesta obtenida en ejecución)
-está documentado en `docs/flujo_real_mml.md`.
 
 Si despliegas con 2 GB de RAM y 1 CPU, un contexto de 2048 tokens suele ser un
 punto de partida razonable. Puedes ajustar el contexto con `N_CTX` y el número
