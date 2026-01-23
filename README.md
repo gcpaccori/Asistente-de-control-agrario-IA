@@ -58,6 +58,7 @@ pip install -r requirements.txt
 mkdir -p models
 wget -O models/qwen2.5-0.5b-instruct-q4_k_m.gguf \\
   https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf
+N_CTX=2048 N_THREADS=1 python validate_local_gguf.py
 python validate_local_gguf.py
 ```
 
@@ -67,6 +68,10 @@ Las pruebas de QA rápidas sobre el modelo local están en:
 `docs/qa_gguf_local.md`.
 Un flujo real (pregunta del productor y respuesta obtenida en ejecución)
 está documentado en `docs/flujo_real_mml.md`.
+
+Si despliegas con 2 GB de RAM y 1 CPU, un contexto de 2048 tokens suele ser un
+punto de partida razonable. Puedes ajustar el contexto con `N_CTX` y el número
+de hilos con `N_THREADS` según tu capacidad.
 
 ## Contrato JSON y conversación (aclaración)
 El **contrato JSON** es el formato estrictamente esperado entre el servidor y
