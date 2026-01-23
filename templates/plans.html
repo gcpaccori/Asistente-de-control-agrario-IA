@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Planes agrícolas (plantillas)</h1>
+  <div class="card">
+    <div class="table-actions">
+      <a class="btn" href="{{ url_for('admin_plan_new') }}">Nuevo plan</a>
+    </div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Cultivo</th>
+        <th>Creado</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for template in templates %}
+        <tr>
+          <td>{{ template.id }}</td>
+          <td>{{ template.crop_type }}</td>
+          <td>{{ template.created_at }}</td>
+          <td class="table-actions">
+            <a class="btn secondary" href="{{ url_for('admin_plan_detail', template_id=template.id) }}">Editar</a>
+          </td>
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="4" class="muted">Sin planes registrados.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="card">
+    <h2>Asignar plan a productores</h2>
+    <form method="post" action="{{ url_for('admin_plan_assign') }}">
+      <div class="input-row">
+        <div>
+          <label>Plan</label>
+          <select name="template_id" required>
+            {% for template in templates %}
+              <option value="{{ template.id }}">{{ template.crop_type }} (ID {{ template.id }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label>Fecha inicio</label>
+          <input type="date" name="start_date" required />
+        </div>
+        <div>
+          <label>Productores</label>
+          <select name="producer_ids" multiple size="6" required>
+            {% for producer in producers %}
+              <option value="{{ producer.id }}">
+                #{{ producer.id }} - {{ producer.name or "Sin nombre" }} ({{ producer.phone }})
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <p class="small">Esto instancia las tareas de la plantilla en cada productor seleccionado.</p>
+      <button class="btn" type="submit">Asignar plan</button>
+    </form>
+  </div>
+{% endblock %}

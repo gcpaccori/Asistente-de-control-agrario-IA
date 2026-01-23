@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Nuevo plan (plantilla)</h1>
+  <div class="card">
+    <form method="post" action="{{ url_for('admin_plan_create') }}">
+      <div class="input-row">
+        <div>
+          <label>Cultivo</label>
+          <input type="text" name="crop_type" required />
+        </div>
+      </div>
+      <label>Tasks JSON</label>
+      <textarea name="tasks_json" placeholder='[{"order":1,"task":"Riego","days_from_start":5}]' required></textarea>
+      <button class="btn" type="submit">Crear plan</button>
+      <a class="btn secondary" href="{{ url_for('admin_plans') }}">Cancelar</a>
+    </form>
+  </div>
+{% endblock %}
