@@ -4,6 +4,15 @@ MVP en Flask para orquestar un modelo de lenguaje (MML) con **tres roles** y
 contrato JSON estricto, orientado a atención por WhatsApp y llenado automático
 de formularios.
 
+> **🚀 Nuevo:** Sistema listo para deployment en Vercel con Node.js
+> 
+> El sistema ahora está configurado en **3 partes**:
+> 1. **Puente WhatsApp** (Node.js, local)
+> 2. **Backend Flask** (Python, Vercel)
+> 3. **API de Modelo** (externa o local)
+>
+> 📖 Lee la [Guía de Arquitectura de 3 Partes](docs/arquitectura-3-partes.md) para entender el sistema completo.
+
 ## Objetivo
 - Recibir mensajes del productor.
 - Construir contexto filtrado por rol.
