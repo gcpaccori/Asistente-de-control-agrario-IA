@@ -146,5 +146,7 @@ def chat() -> dict[str, str]:
 
 if __name__ == "__main__":
     # Para desarrollo local
+    # NOTA: debug=True solo para desarrollo. En producción usar debug=False
     port = int(os.getenv("PORT", "8001"))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    debug_mode = os.getenv("DEBUG", "False").lower() == "true"
+    app.run(host="0.0.0.0", port=port, debug=debug_mode)

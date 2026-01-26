@@ -1636,4 +1636,6 @@ if __name__ == "__main__":
     migrate_db()
     with app.app_context():
         ensure_agent_defaults()
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    # NOTA: debug=True solo para desarrollo. En producción usar debug=False
+    debug_mode = os.getenv("DEBUG", "False").lower() == "true"
+    app.run(host="0.0.0.0", port=5000, debug=debug_mode)
