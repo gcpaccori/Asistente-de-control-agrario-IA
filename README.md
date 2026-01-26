@@ -31,7 +31,19 @@ de formularios.
 
 ## Requisitos
 - Python 3.10+
-- Node.js 18+ (solo si usas el puente de WhatsApp)
+- Node.js 18+ (para el puente de WhatsApp)
+- Cuenta en Vercel (para deployment en producción)
+- API de modelo de lenguaje (Grok, OpenAI, o modelo local)
+
+## 🚀 Inicio Rápido
+
+### Opción A: Deployment en Vercel (Recomendado para Producción)
+
+Sigue la guía paso a paso: **[docs/setup-completo.md](docs/setup-completo.md)**
+
+Esta guía te llevará desde cero hasta tener el sistema funcionando en Vercel con las 3 partes configuradas.
+
+### Opción B: Desarrollo Local
 
 Instalación:
 ```bash
