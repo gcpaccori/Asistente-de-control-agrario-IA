@@ -126,6 +126,18 @@ Crea una alerta (para intervención técnica).
 ### `GET /health`
 Salud del servicio.
 
+## Deployment en Vercel
+
+Para desplegar el sistema en Vercel con Node.js y una API externa de modelo de lenguaje, consulta la guía completa en:
+
+**[docs/vercel-deployment.md](docs/vercel-deployment.md)**
+
+La guía incluye:
+- Configuración paso a paso
+- Variables de entorno requeridas
+- Integración con el puente WhatsApp
+- Solución de problemas comunes
+
 ## Nota
 El archivo `docs/contrato-mml.md` contiene el contrato completo MML ↔ Flask
 para los tres roles (formulario, consulta, intervención).

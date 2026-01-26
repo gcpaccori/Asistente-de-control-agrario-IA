@@ -10,7 +10,12 @@ import os
 import sqlite3
 import requests
 from flask import Flask, g, jsonify, redirect, render_template, request, url_for
-from llama_cpp import Llama
+
+# llama_cpp is optional - only needed for local model execution
+try:
+    from llama_cpp import Llama
+except ImportError:
+    Llama = None
 
 BASE_DIR = Path(__file__).resolve().parent
 INSTANCE_DIR = BASE_DIR / "instance"
@@ -786,7 +791,7 @@ def run_mml(role: str, context: dict[str, Any]) -> dict[str, Any]:
         raise RuntimeError("Respuesta inválida desde el modelo local.") from exc
 
 
-_LOCAL_LLM: Llama | None = None
+_LOCAL_LLM: Any = None
 
 
 def call_model_api(system_prompt: str, context: dict[str, Any], max_tokens: int) -> dict[str, Any]:
@@ -805,8 +810,12 @@ def call_model_api(system_prompt: str, context: dict[str, Any], max_tokens: int)
         raise RuntimeError("Respuesta inválida desde la API del modelo.") from exc
 
 
-def get_local_llm() -> Llama:
+def get_local_llm() -> Any:
     global _LOCAL_LLM
+    if Llama is None:
+        raise RuntimeError(
+            "llama-cpp-python no está instalado. Use MODEL_API_URL en su lugar."
+        )
     if _LOCAL_LLM is None:
         if not Path(LOCAL_MODEL_PATH).exists():
             raise RuntimeError(
