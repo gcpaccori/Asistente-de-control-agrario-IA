@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Nuevo productor</h1>
+  <div class="card">
+    <form method="post" action="{{ url_for('admin_producer_create') }}">
+      <div class="input-row">
+        <div>
+          <div class="small">Teléfono</div>
+          <input type="text" name="phone" required />
+        </div>
+        <div>
+          <div class="small">Nombre</div>
+          <input type="text" name="name" />
+        </div>
+        <div>
+          <div class="small">Zona</div>
+          <input type="text" name="zone" />
+        </div>
+      </div>
+      <div class="input-row">
+        <div>
+          <div class="small">Zona horaria</div>
+          <input type="text" name="timezone" value="America/Lima" />
+        </div>
+        <div>
+          <div class="small">Estado</div>
+          <select name="status">
+            <option value="activo">Activo</option>
+            <option value="inactivo">Inactivo</option>
+          </select>
+        </div>
+      </div>
+      <div class="small">Rol asignado</div>
+      <select name="assigned_role">
+        <option value="">Sin asignar</option>
+        <option value="formulario">formulario</option>
+        <option value="consulta">consulta</option>
+        <option value="intervencion">intervencion</option>
+      </select>
+      <label>
+        <input type="checkbox" name="allowed" />
+        Autorizado para análisis
+      </label>
+      <div>
+        <button class="btn" type="submit">Crear</button>
+      </div>
+    </form>
+  </div>
+{% endblock %}

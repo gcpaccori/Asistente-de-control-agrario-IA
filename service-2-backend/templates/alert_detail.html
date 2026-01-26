@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Alerta #{{ alert.id }}</h1>
+  <div class="card">
+    <p><strong>Productor:</strong> {{ alert.phone }}</p>
+    <p><strong>Nivel:</strong> {{ alert.level }}</p>
+    <p><strong>Motivo:</strong> {{ alert.reason }}</p>
+    <p><strong>Acción recomendada:</strong> {{ alert.action }}</p>
+    <p><strong>Mensaje:</strong> {{ alert.message }}</p>
+    <p><strong>Estado:</strong> {{ alert.status }}</p>
+    <p><strong>Creada:</strong> {{ alert.created_at }}</p>
+    <p><strong>Enviada:</strong> {{ alert.sent_at or "-" }}</p>
+  </div>
+  <div class="card">
+    <form method="post" action="{{ url_for('admin_alert_status', alert_id=alert.id) }}">
+      <label>Estado</label>
+      <select name="status">
+        <option value="abierta" {% if alert.status == "abierta" %}selected{% endif %}>Abierta</option>
+        <option value="en_proceso" {% if alert.status == "en_proceso" %}selected{% endif %}>En proceso</option>
+        <option value="cerrada" {% if alert.status == "cerrada" %}selected{% endif %}>Cerrada</option>
+      </select>
+      <button class="btn" type="submit">Actualizar estado</button>
+    </form>
+  </div>
+{% endblock %}

@@ -4,6 +4,33 @@ MVP en Flask para orquestar un modelo de lenguaje (MML) con **tres roles** y
 contrato JSON estricto, orientado a atención por WhatsApp y llenado automático
 de formularios.
 
+## 🚀 Despliegue en Producción
+
+Este proyecto está diseñado para desplegarse como **3 servicios independientes**:
+
+1. **Servicio 1 (Model API)**: Flask + LLM → Leapcell (serverless)
+2. **Servicio 2 (Backend)**: Flask + SQLite → Leapcell (serverless)
+3. **Servicio 3 (WhatsApp)**: Node.js → Railway/Render (persistente 24/7)
+
+### 📚 Índice de Documentación
+
+**👉 [Ver INDEX.md](INDEX.md) - Índice completo de toda la documentación**
+
+### 📖 Guías Principales
+
+- **❓ FAQ**: [`docs/FAQ.md`](docs/FAQ.md) ← **EMPIEZA AQUÍ** (responde todas tus preguntas)
+- **🎯 Inicio Rápido**: [`QUICK_START.md`](QUICK_START.md) - Resumen ejecutivo
+- **📋 Guía Completa**: [`DEPLOYMENT_GUIDE.md`](DEPLOYMENT_GUIDE.md) - Paso a paso
+- **🏗️ Arquitectura**: [`docs/ARQUITECTURA_DESPLIEGUE.md`](docs/ARQUITECTURA_DESPLIEGUE.md) - Diseño detallado
+- **📊 Diagramas**: [`docs/DIAGRAMA_ARQUITECTURA.md`](docs/DIAGRAMA_ARQUITECTURA.md) - Flujos visuales
+
+### 📦 Servicios Individuales
+
+Cada servicio tiene su propia documentación:
+- [`service-1-model/README.md`](service-1-model/README.md) - Model API (LLM)
+- [`service-2-backend/README.md`](service-2-backend/README.md) - Backend Principal
+- [`service-3-whatsapp/README.md`](service-3-whatsapp/README.md) - WhatsApp Bridge
+
 ## Objetivo
 - Recibir mensajes del productor.
 - Construir contexto filtrado por rol.
@@ -14,24 +41,66 @@ de formularios.
 ## Estructura
 ```
 .
-├── app.py
-├── docs
-│   └── contrato-mml.md
-└── requirements.txt
+├── app.py                    # Backend principal (legacy)
+├── model_api.py             # Model API (legacy)
+├── service-1-model/         # 📦 Servicio 1: Model API
+├── service-2-backend/       # 📦 Servicio 2: Backend Principal
+├── service-3-whatsapp/      # 📦 Servicio 3: WhatsApp Bridge
+├── docs/                    # Documentación
+├── DEPLOYMENT_GUIDE.md      # Guía de despliegue completa
+└── QUICK_START.md          # Guía rápida
 ```
 
-## Requisitos
+## 💻 Desarrollo Local
+
+### Requisitos
 - Python 3.10+
-- Node.js 18+ (solo si usas el puente de WhatsApp)
+- Node.js 18+ (para el puente de WhatsApp)
 
-Instalación:
+### Opción 1: Archivos Legacy (Monolito)
+
+Para desarrollo rápido usando los archivos originales:
+
 ```bash
+# Instalar dependencias Python
 pip install -r requirements.txt
+
+# Ejecutar backend principal
+python app.py
+# Acceder a http://localhost:5000
+
+# En otra terminal, ejecutar Model API (si quieres separado)
+python model_api.py
+# Acceder a http://localhost:8001
+
+# En otra terminal, ejecutar WhatsApp (opcional)
+cd whatsapp
+npm install
+FLASK_URL=http://localhost:5000 node index.js
 ```
 
-## Ejecutar
+### Opción 2: Servicios Separados (Producción-like)
+
+Para probar la arquitectura de 3 servicios:
+
 ```bash
-python app.py
+# Terminal 1: Servicio 1 (Model API)
+cd service-1-model
+pip install -r requirements.txt
+python model_api.py
+# → http://localhost:8001
+
+# Terminal 2: Servicio 2 (Backend)
+cd service-2-backend
+pip install -r requirements.txt
+MODEL_API_URL=http://localhost:8001 python app.py
+# → http://localhost:5000
+
+# Terminal 3: Servicio 3 (WhatsApp)
+cd service-3-whatsapp
+npm install
+FLASK_URL=http://localhost:5000 node index.js
+# → Escanear QR
 ```
 
 ## Base de datos y panel visual
