@@ -12,11 +12,17 @@ Este proyecto está diseñado para desplegarse como **3 servicios independientes
 2. **Servicio 2 (Backend)**: Flask + SQLite → Leapcell (serverless)
 3. **Servicio 3 (WhatsApp)**: Node.js → Railway/Render (persistente 24/7)
 
-### 📖 Guías de Despliegue
+### 📚 Índice de Documentación
 
-- **🎯 Inicio Rápido**: Lee [`QUICK_START.md`](QUICK_START.md) para entender la arquitectura
-- **📋 Guía Completa**: Sigue [`DEPLOYMENT_GUIDE.md`](DEPLOYMENT_GUIDE.md) paso a paso
-- **🏗️ Arquitectura Detallada**: Consulta [`docs/ARQUITECTURA_DESPLIEGUE.md`](docs/ARQUITECTURA_DESPLIEGUE.md)
+**👉 [Ver INDEX.md](INDEX.md) - Índice completo de toda la documentación**
+
+### 📖 Guías Principales
+
+- **❓ FAQ**: [`docs/FAQ.md`](docs/FAQ.md) ← **EMPIEZA AQUÍ** (responde todas tus preguntas)
+- **🎯 Inicio Rápido**: [`QUICK_START.md`](QUICK_START.md) - Resumen ejecutivo
+- **📋 Guía Completa**: [`DEPLOYMENT_GUIDE.md`](DEPLOYMENT_GUIDE.md) - Paso a paso
+- **🏗️ Arquitectura**: [`docs/ARQUITECTURA_DESPLIEGUE.md`](docs/ARQUITECTURA_DESPLIEGUE.md) - Diseño detallado
+- **📊 Diagramas**: [`docs/DIAGRAMA_ARQUITECTURA.md`](docs/DIAGRAMA_ARQUITECTURA.md) - Flujos visuales
 
 ### 📦 Servicios Individuales
 
