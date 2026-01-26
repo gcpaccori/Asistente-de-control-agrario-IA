@@ -8,12 +8,13 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import json
 import os
 import sqlite3
+import requests
 from flask import Flask, g, jsonify, redirect, render_template, request, url_for
 from llama_cpp import Llama
 
 BASE_DIR = Path(__file__).resolve().parent
 INSTANCE_DIR = BASE_DIR / "instance"
-DB_PATH = INSTANCE_DIR / "app.db"
+DB_PATH = Path(os.getenv("DATABASE_PATH", str(INSTANCE_DIR / "app.db")))
 
 app = Flask(__name__, instance_path=str(INSTANCE_DIR))
 app.config["DATABASE"] = str(DB_PATH)
@@ -42,6 +43,7 @@ N_CTX = int(os.getenv("N_CTX", "2048"))
 N_THREADS = int(os.getenv("N_THREADS", "1"))
 DEFAULT_TIMEZONE = os.getenv("DEFAULT_TIMEZONE", "America/Lima")
 DAILY_CHECKIN_HOUR = int(os.getenv("DAILY_CHECKIN_HOUR", "8"))
+MODEL_API_URL = os.getenv("MODEL_API_URL")
 
 PROMPTS = {
     "formulario": (
@@ -766,6 +768,8 @@ def build_context(role: str, phone: str, last_user_message: str) -> dict[str, An
 def run_mml(role: str, context: dict[str, Any]) -> dict[str, Any]:
     agent_config = get_agent_config(role)
     system_prompt = agent_config["prompt"]
+    if MODEL_API_URL:
+        return call_model_api(system_prompt, context, agent_config["max_tokens"])
     llm = get_local_llm()
     response = llm.create_chat_completion(
         messages=[
@@ -783,6 +787,22 @@ def run_mml(role: str, context: dict[str, Any]) -> dict[str, Any]:
 
 
 _LOCAL_LLM: Llama | None = None
+
+
+def call_model_api(system_prompt: str, context: dict[str, Any], max_tokens: int) -> dict[str, Any]:
+    payload = {
+        "system": system_prompt,
+        "context": context,
+        "max_tokens": max_tokens,
+    }
+    response = requests.post(f"{MODEL_API_URL.rstrip('/')}/chat", json=payload, timeout=120)
+    response.raise_for_status()
+    data = response.json()
+    content = data.get("content") or "{}"
+    try:
+        return json.loads(content)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("Respuesta inválida desde la API del modelo.") from exc
 
 
 def get_local_llm() -> Llama:
