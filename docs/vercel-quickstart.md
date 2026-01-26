@@ -52,7 +52,7 @@ curl https://tu-proyecto.vercel.app/health
 
 Deberías ver:
 ```json
-{"status": "ok", "time": "2024-..."}
+{"status": "ok", "time": "2026-..."}
 ```
 
 ### 5. Conecta WhatsApp
