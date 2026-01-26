@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Nuevo tipo de bitácora</h1>
+  <div class="card">
+    <form method="post" action="{{ url_for('admin_log_type_create') }}">
+      <div class="input-row">
+        <div>
+          <label>Nombre</label>
+          <input type="text" name="name" required />
+        </div>
+      </div>
+      <label>Descripción</label>
+      <textarea name="description"></textarea>
+      <button class="btn" type="submit">Crear tipo</button>
+      <a class="btn secondary" href="{{ url_for('admin_log_types') }}">Cancelar</a>
+    </form>
+  </div>
+{% endblock %}

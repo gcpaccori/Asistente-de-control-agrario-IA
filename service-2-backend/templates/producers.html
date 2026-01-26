@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Productores</h1>
+  <div class="card">
+    <a class="btn" href="{{ url_for('admin_producer_new') }}">Nuevo productor</a>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Teléfono</th>
+        <th>Nombre</th>
+        <th>Zona</th>
+        <th>Estado</th>
+        <th>Zona horaria</th>
+        <th>Autorizado</th>
+        <th>Rol asignado</th>
+        <th>Creado</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for producer in producers %}
+        <tr>
+          <td><a href="{{ url_for('admin_producer_detail', producer_id=producer.id) }}">{{ producer.id }}</a></td>
+          <td>{{ producer.phone }}</td>
+          <td>{{ producer.name or "-" }}</td>
+          <td>{{ producer.zone or "-" }}</td>
+          <td>{{ producer.status or "-" }}</td>
+          <td>{{ producer.timezone or "-" }}</td>
+          <td>{{ "Sí" if producer.allowed else "No" }}</td>
+          <td>{{ producer.assigned_role or "-" }}</td>
+          <td>{{ producer.created_at }}</td>
+          <td class="table-actions">
+            <a class="btn secondary" href="{{ url_for('admin_producer_tasks', producer_id=producer.id) }}">Tareas</a>
+            <a class="btn secondary" href="{{ url_for('admin_daily_logs', producer_id=producer.id) }}">Bitácora</a>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

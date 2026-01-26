@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Editar plan</h1>
+  <div class="card">
+    <form method="post" action="{{ url_for('admin_plan_update', template_id=template.id) }}">
+      <div class="input-row">
+        <div>
+          <label>Cultivo</label>
+          <input type="text" name="crop_type" value="{{ template.crop_type }}" required />
+        </div>
+        <div>
+          <label>ID</label>
+          <input type="text" value="{{ template.id }}" disabled />
+        </div>
+      </div>
+      <label>Tasks JSON</label>
+      <textarea name="tasks_json" required>{{ template.tasks_json }}</textarea>
+      <button class="btn" type="submit">Guardar cambios</button>
+      <a class="btn secondary" href="{{ url_for('admin_plans') }}">Volver</a>
+    </form>
+  </div>
+{% endblock %}
