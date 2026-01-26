@@ -57,6 +57,4 @@ def chat() -> dict[str, str]:
 
 
 if __name__ == "__main__":
-    # NOTA: debug=True solo para desarrollo. En producción usar debug=False
-    debug_mode = os.getenv("DEBUG", "False").lower() == "true"
-    app.run(host="0.0.0.0", port=8001, debug=debug_mode)
+    app.run(host="0.0.0.0", port=8001, debug=True)

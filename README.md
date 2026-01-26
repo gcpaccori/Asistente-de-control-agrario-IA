@@ -4,15 +4,6 @@ MVP en Flask para orquestar un modelo de lenguaje (MML) con **tres roles** y
 contrato JSON estricto, orientado a atención por WhatsApp y llenado automático
 de formularios.
 
-> **🚀 Nuevo:** Sistema listo para deployment en Vercel con Node.js
-> 
-> El sistema ahora está configurado en **3 partes**:
-> 1. **Puente WhatsApp** (Node.js, local)
-> 2. **Backend Flask** (Python, Vercel)
-> 3. **API de Modelo** (externa o local)
->
-> 📖 Lee la [Guía de Arquitectura de 3 Partes](docs/arquitectura-3-partes.md) para entender el sistema completo.
-
 ## Objetivo
 - Recibir mensajes del productor.
 - Construir contexto filtrado por rol.
@@ -31,19 +22,7 @@ de formularios.
 
 ## Requisitos
 - Python 3.10+
-- Node.js 18+ (para el puente de WhatsApp)
-- Cuenta en Vercel (para deployment en producción)
-- API de modelo de lenguaje (Grok, OpenAI, o modelo local)
-
-## 🚀 Inicio Rápido
-
-### Opción A: Deployment en Vercel (Recomendado para Producción)
-
-Sigue la guía paso a paso: **[docs/setup-completo.md](docs/setup-completo.md)**
-
-Esta guía te llevará desde cero hasta tener el sistema funcionando en Vercel con las 3 partes configuradas.
-
-### Opción B: Desarrollo Local
+- Node.js 18+ (solo si usas el puente de WhatsApp)
 
 Instalación:
 ```bash
@@ -146,18 +125,6 @@ Crea una alerta (para intervención técnica).
 
 ### `GET /health`
 Salud del servicio.
-
-## Deployment en Vercel
-
-Para desplegar el sistema en Vercel con Node.js y una API externa de modelo de lenguaje, consulta la guía completa en:
-
-**[docs/vercel-deployment.md](docs/vercel-deployment.md)**
-
-La guía incluye:
-- Configuración paso a paso
-- Variables de entorno requeridas
-- Integración con el puente WhatsApp
-- Solución de problemas comunes
 
 ## Nota
 El archivo `docs/contrato-mml.md` contiene el contrato completo MML ↔ Flask

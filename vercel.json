@@ -2,21 +2,18 @@
   "version": 2,
   "builds": [
     {
-      "src": "api/index.py",
-      "use": "@vercel/python"
+      "src": "api/webhook.js",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
     {
-      "src": "/static/(.*)",
-      "dest": "/api/index.py"
+      "src": "/webhook",
+      "dest": "/api/webhook.js"
     },
     {
-      "src": "/(.*)",
-      "dest": "/api/index.py"
+      "src": "/",
+      "dest": "/api/webhook.js"
     }
-  ],
-  "env": {
-    "PYTHON_VERSION": "3.10"
-  }
+  ]
 }
