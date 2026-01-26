@@ -1,0 +1,9 @@
+api/
+.vercelignore
+node_modules/
+__pycache__/
+*.pyc
+models/
+*.gguf
+instance/
+.env
