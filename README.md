@@ -7,7 +7,7 @@ de formularios.
 ## Objetivo
 - Recibir mensajes del productor.
 - Construir contexto filtrado por rol.
-- Llamar a un MML externo (Groq u otro) usando el contrato JSON.
+- Llamar a un MML local usando el contrato JSON.
 - Guardar/actualizar el formulario cuando corresponda.
 - Emitir alertas cuando aplique.
 
@@ -49,25 +49,53 @@ Desde el panel puedes:
 - Registrar productores autorizados y asignar roles por productor.
 - Ver historial y análisis reciente por productor.
 
-## Modelo (xAI)
-El servidor se integra con xAI a través del contrato JSON.
+## Contrato MML (JSON)
+El contrato completo está en `docs/contrato-mml.md`.
 
-Puedes usar variables de entorno o un archivo `.env` en la raíz del proyecto.
+## Modelo local (GGUF)
+Para pruebas locales en CPU usamos `llama-cpp-python` con un modelo GGUF
+cuantizado. Descarga el modelo y valida la carga con el script incluido:
 
-**Opción 1: variables de entorno (xAI)**
 ```bash
-export MML_PROVIDER=xai
-export XAI_API_KEY="tu_api_key"
-export XAI_MODEL="grok-4-latest"
-python app.py
+pip install -r requirements.txt
+mkdir -p models
+wget -O models/qwen2.5-3b-instruct-q4_k_m.gguf \\
+  https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/main/qwen2.5-3b-instruct-q4_k_m.gguf
+N_CTX=2048 N_THREADS=1 python validate_local_gguf.py
 ```
 
-**Opción 2: archivo .env**
-Copia `.env.example` a `.env` y reemplaza los valores:
-```bash
-cp .env.example .env
-python app.py
-```
+Si despliegas con 2 GB de RAM y 1 CPU, un contexto de 2048 tokens suele ser un
+punto de partida razonable. Puedes ajustar el contexto con `N_CTX` y el número
+de hilos con `N_THREADS` según tu capacidad.
+
+## Contrato JSON y conversación (aclaración)
+El **contrato JSON** es el formato estrictamente esperado entre el servidor y
+el MML: se envía un conjunto de mensajes con rol (`system`, `assistant`, `user`)
+y el modelo debe devolver un JSON válido según el rol y la tarea. El detalle
+completo está en `docs/contrato-mml.md`, pero en resumen:
+
+- **system**: define reglas y formato de salida (por ejemplo, “responde solo
+  JSON con claves específicas”). Esto restringe la salida y reduce la
+  “libertad” del modelo para asegurar consistencia.
+- **assistant**: permite agregar contexto previo (p. ej., estado del productor,
+  formulario, alertas) y pide al modelo responder dentro del contrato.
+- **user**: contiene la consulta real del productor o la instrucción que se
+  quiere resolver.
+
+### ¿Hasta qué punto “conversa” el modelo?
+El modelo sí puede tener una conversación fluida **si el contrato lo permite**.
+Cuando el `system` exige JSON estricto, la respuesta se limita a ese formato y
+no a texto libre. Para una conversación más natural, puedes relajar el contrato
+en el `system` (por ejemplo, “responde en lenguaje natural”) o crear un modo de
+chat sin JSON para ciertos flujos.
+
+### Libertad de expresión recomendada
+- **Alta libertad** (conversación real): `system` pide lenguaje natural y solo
+  acota tono/longitud. Útil para orientación general o mensajes al productor.
+- **Media libertad**: `system` pide estructura (p. ej., bullets o campos) pero
+  permite frases naturales dentro de cada campo.
+- **Baja libertad** (contrato estricto): `system` exige JSON exacto. Útil para
+  automatizar formularios y decisiones, pero menos “conversacional”.
 
 ## WhatsApp (puente inicial)
 Incluye un puente mínimo con `whatsapp-web.js` que usa tu sesión abierta en el

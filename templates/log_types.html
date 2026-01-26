@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+  <h1>Tipos de bitácora</h1>
+  <div class="card">
+    <a class="btn" href="{{ url_for('admin_log_type_new') }}">Nuevo tipo</a>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Nombre</th>
+        <th>Descripción</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for log_type in log_types %}
+        <tr>
+          <td>{{ log_type.id }}</td>
+          <td>{{ log_type.name }}</td>
+          <td>{{ log_type.description }}</td>
+          <td class="table-actions">
+            <a class="btn secondary" href="{{ url_for('admin_log_type_detail', log_type_id=log_type.id) }}">Editar</a>
+          </td>
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="4" class="muted">Sin tipos de bitácora.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}
