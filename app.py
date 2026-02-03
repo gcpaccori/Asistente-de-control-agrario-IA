@@ -954,6 +954,8 @@ def agent() -> Any:
         return jsonify({"error": f"agente {role} desactivado"}), 403
     
     # Check role-specific enablement using dynamic attribute lookup
+    # Note: We check if key exists for forward compatibility - if a new role
+    # is added without an enable column, we allow it by default
     enable_key = f"enable_{role}"
     if enable_key in producer and not producer.get(enable_key):
         return jsonify({"error": f"agente {role} desactivado"}), 403

@@ -8,10 +8,12 @@ and that the database-driven configuration works correctly.
 import os
 import sys
 import json
+import tempfile
 from pathlib import Path
 
-# Set test database
-os.environ['DATABASE_PATH'] = '/tmp/test_qwen_integration.db'
+# Set test database - use tempfile for cross-platform compatibility
+test_db_dir = tempfile.gettempdir()
+os.environ['DATABASE_PATH'] = os.path.join(test_db_dir, 'test_qwen_integration.db')
 
 # Import after setting environment
 from app import (
