@@ -37,7 +37,7 @@ def load_env_file() -> None:
 load_env_file()
 
 LOCAL_MODEL_PATH = os.getenv(
-    "LOCAL_MODEL_PATH", str(BASE_DIR / "models/qwen2.5-3b-instruct-q4_k_m.gguf")
+    "LOCAL_MODEL_PATH", str(BASE_DIR / "models/qwen2.5-0.5b-instruct-q4_k_m.gguf")
 )
 N_CTX = int(os.getenv("N_CTX", "2048"))
 N_THREADS = int(os.getenv("N_THREADS", "1"))
@@ -823,9 +823,9 @@ def get_local_llm() -> Llama:
 def get_agent_config(role: str) -> dict[str, Any]:
     db = get_db()
     row = db.execute("SELECT * FROM agent_configs WHERE role = ?", (role,)).fetchone()
-    if row:
-        return dict(row)
-    return {"role": role, "enabled": 1, "prompt": PROMPTS[role], "max_tokens": 300}
+    if not row:
+        raise ValueError(f"Agent role '{role}' not found in database. Please initialize agent_configs table.")
+    return dict(row)
 
 
 def apply_model_actions(phone: str, model_output: dict[str, Any]) -> dict[str, Any]:
