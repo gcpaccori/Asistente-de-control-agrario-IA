@@ -123,19 +123,22 @@ El contrato completo está en `docs/contrato-mml.md`.
 
 ## Modelo local (GGUF)
 Para pruebas locales en CPU usamos `llama-cpp-python` con un modelo GGUF
-cuantizado. Descarga el modelo y valida la carga con el script incluido:
+cuantizado. El proyecto ahora usa **Qwen2.5-0.5B-Instruct** para mayor velocidad
+y menor uso de recursos. Descarga el modelo y valida la carga con el script incluido:
 
 ```bash
 pip install -r requirements.txt
 mkdir -p models
-wget -O models/qwen2.5-3b-instruct-q4_k_m.gguf \\
-  https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/main/qwen2.5-3b-instruct-q4_k_m.gguf
+wget -O models/qwen2.5-0.5b-instruct-q4_k_m.gguf \
+  https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf
 N_CTX=2048 N_THREADS=1 python validate_local_gguf.py
 ```
 
-Si despliegas con 2 GB de RAM y 1 CPU, un contexto de 2048 tokens suele ser un
-punto de partida razonable. Puedes ajustar el contexto con `N_CTX` y el número
-de hilos con `N_THREADS` según tu capacidad.
+**Nota sobre el modelo**: Qwen2.5-0.5B es significativamente más rápido y usa menos
+memoria que el anterior Qwen2.5-3B, ideal para despliegues con recursos limitados
+(1 GB RAM, 1 CPU). Si despliegas con 2 GB de RAM y 1 CPU, un contexto de 2048 tokens
+suele ser un punto de partida razonable. Puedes ajustar el contexto con `N_CTX` y el
+número de hilos con `N_THREADS` según tu capacidad.
 
 ## Contrato JSON y conversación (aclaración)
 El **contrato JSON** es el formato estrictamente esperado entre el servidor y

@@ -6,6 +6,7 @@ API Flask dedicada exclusivamente a inferencia del modelo de lenguaje (LLM).
 ## 🔧 Características
 - Framework: Flask
 - Modelo: llama-cpp-python con GGUF
+- Modelo actual: **Qwen2.5-0.5B-Instruct** (rápido y eficiente)
 - Puerto: 8001
 - Tipo: **Serverless OK** ✅
 
@@ -18,11 +19,11 @@ pip install -r requirements.txt
 ```bash
 # Descargar modelo GGUF (si no lo tienes)
 mkdir -p models
-wget -O models/qwen2.5-3b-instruct-q4_k_m.gguf \
-  https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/main/qwen2.5-3b-instruct-q4_k_m.gguf
+wget -O models/qwen2.5-0.5b-instruct-q4_k_m.gguf \
+  https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf
 
 # Configurar variables de entorno
-export LOCAL_MODEL_PATH=./models/qwen2.5-3b-instruct-q4_k_m.gguf
+export LOCAL_MODEL_PATH=./models/qwen2.5-0.5b-instruct-q4_k_m.gguf
 export N_CTX=2048
 export N_THREADS=1
 
@@ -36,7 +37,7 @@ El servicio estará disponible en `http://localhost:8001`
 
 | Variable | Descripción | Valor por Defecto |
 |----------|-------------|-------------------|
-| `LOCAL_MODEL_PATH` | Ruta al archivo GGUF | `./models/qwen2.5-3b-instruct-q4_k_m.gguf` |
+| `LOCAL_MODEL_PATH` | Ruta al archivo GGUF | `./models/qwen2.5-0.5b-instruct-q4_k_m.gguf` |
 | `N_CTX` | Tamaño del contexto | `2048` |
 | `N_THREADS` | Número de threads CPU | `1` |
 | `PORT` | Puerto del servicio | `8001` |
@@ -93,13 +94,13 @@ Port: 8001
 ### Paso 3: Variables de Entorno
 Configurar en el panel de Leapcell:
 ```
-LOCAL_MODEL_PATH=/app/models/qwen2.5-3b-instruct-q4_k_m.gguf
+LOCAL_MODEL_PATH=/app/models/qwen2.5-0.5b-instruct-q4_k_m.gguf
 N_CTX=2048
 N_THREADS=1
 ```
 
 ### Paso 4: Subir Modelo GGUF
-⚠️ **IMPORTANTE**: El modelo pesa 3-4 GB
+⚠️ **IMPORTANTE**: El modelo pesa ~500 MB (Qwen2.5-0.5B es mucho más ligero)
 
 Opciones:
 1. **Volumen persistente** (recomendado)
@@ -142,9 +143,9 @@ curl -X POST https://tu-servicio-1.leapcell.dev/chat \
 - Requests subsecuentes serán más rápidas si el contenedor está caliente
 
 ### Recursos
-- **RAM**: Mínimo 2 GB para Qwen 3B
+- **RAM**: Mínimo 1 GB para Qwen 0.5B (vs 2 GB para 3B)
 - **CPU**: 1 core mínimo (más es mejor)
-- **Storage**: 4-5 GB para el modelo
+- **Storage**: 600 MB para el modelo (vs 4-5 GB para 3B)
 
 ### Optimización
 - Usar modelo cuantizado (Q4_K_M es buena opción)
