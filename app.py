@@ -926,7 +926,11 @@ def agent() -> Any:
 
     producer = get_or_create_producer(phone)
     role = role or producer.get("assigned_role") or "formulario"
-    if role not in PROMPTS:
+    
+    # Validate role exists in database
+    try:
+        agent_config = get_agent_config(role)
+    except ValueError:
         return jsonify({"error": "role invalido"}), 400
 
     db = get_db()
@@ -940,19 +944,19 @@ def agent() -> Any:
     db.commit()
 
     context = build_context(role, phone, message)
-    agent_config = get_agent_config(role)
+    
+    # Validation checks
     if not producer.get("allowed"):
         return jsonify({"error": "productor no autorizado"}), 403
     if producer.get("status") != "activo":
         return jsonify({"error": "productor inactivo"}), 403
     if not agent_config.get("enabled"):
         return jsonify({"error": f"agente {role} desactivado"}), 403
-    if role == "formulario" and not producer.get("enable_formulario"):
-        return jsonify({"error": "agente formulario desactivado"}), 403
-    if role == "consulta" and not producer.get("enable_consulta"):
-        return jsonify({"error": "agente consulta desactivado"}), 403
-    if role == "intervencion" and not producer.get("enable_intervencion"):
-        return jsonify({"error": "agente intervencion desactivado"}), 403
+    
+    # Check role-specific enablement using dynamic attribute lookup
+    enable_key = f"enable_{role}"
+    if enable_key in producer and not producer.get(enable_key):
+        return jsonify({"error": f"agente {role} desactivado"}), 403
 
     model_output = run_mml(role, context)
     model_output = apply_model_actions(phone, model_output)
