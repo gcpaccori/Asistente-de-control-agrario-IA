@@ -37,7 +37,7 @@ def load_env_file() -> None:
 load_env_file()
 
 LOCAL_MODEL_PATH = os.getenv(
-    "LOCAL_MODEL_PATH", str(BASE_DIR / "models/qwen2.5-3b-instruct-q4_k_m.gguf")
+    "LOCAL_MODEL_PATH", str(BASE_DIR / "models/qwen2.5-0.5b-instruct-q4_k_m.gguf")
 )
 N_CTX = int(os.getenv("N_CTX", "2048"))
 N_THREADS = int(os.getenv("N_THREADS", "1"))
@@ -823,9 +823,9 @@ def get_local_llm() -> Llama:
 def get_agent_config(role: str) -> dict[str, Any]:
     db = get_db()
     row = db.execute("SELECT * FROM agent_configs WHERE role = ?", (role,)).fetchone()
-    if row:
-        return dict(row)
-    return {"role": role, "enabled": 1, "prompt": PROMPTS[role], "max_tokens": 300}
+    if not row:
+        raise ValueError(f"Agent role '{role}' not found in database. Please initialize agent_configs table.")
+    return dict(row)
 
 
 def apply_model_actions(phone: str, model_output: dict[str, Any]) -> dict[str, Any]:
@@ -926,7 +926,11 @@ def agent() -> Any:
 
     producer = get_or_create_producer(phone)
     role = role or producer.get("assigned_role") or "formulario"
-    if role not in PROMPTS:
+    
+    # Validate role exists in database
+    try:
+        agent_config = get_agent_config(role)
+    except ValueError:
         return jsonify({"error": "role invalido"}), 400
 
     db = get_db()
@@ -940,19 +944,21 @@ def agent() -> Any:
     db.commit()
 
     context = build_context(role, phone, message)
-    agent_config = get_agent_config(role)
+    
+    # Validation checks
     if not producer.get("allowed"):
         return jsonify({"error": "productor no autorizado"}), 403
     if producer.get("status") != "activo":
         return jsonify({"error": "productor inactivo"}), 403
     if not agent_config.get("enabled"):
         return jsonify({"error": f"agente {role} desactivado"}), 403
-    if role == "formulario" and not producer.get("enable_formulario"):
-        return jsonify({"error": "agente formulario desactivado"}), 403
-    if role == "consulta" and not producer.get("enable_consulta"):
-        return jsonify({"error": "agente consulta desactivado"}), 403
-    if role == "intervencion" and not producer.get("enable_intervencion"):
-        return jsonify({"error": "agente intervencion desactivado"}), 403
+    
+    # Check role-specific enablement using dynamic attribute lookup
+    # Note: We check if key exists for forward compatibility - if a new role
+    # is added without an enable column, we allow it by default
+    enable_key = f"enable_{role}"
+    if enable_key in producer and not producer.get(enable_key):
+        return jsonify({"error": f"agente {role} desactivado"}), 403
 
     model_output = run_mml(role, context)
     model_output = apply_model_actions(phone, model_output)
