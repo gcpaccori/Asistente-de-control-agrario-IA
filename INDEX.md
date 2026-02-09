@@ -12,9 +12,38 @@
    - Resumen de 2 minutos
    - Checklist visual
 
-3. **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)**
+3. **[COMO_EJECUTAR.md](COMO_EJECUTAR.md)** ← **¿Cómo ejecutar el proyecto?**
+   - Comandos BUILD y START
+   - Guía completa de ejecución local
+
+4. **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)**
    - Guía paso a paso para desplegar
    - Configuración completa
+
+---
+
+## 🚀 Ejecución Rápida (Desarrollo Local)
+
+| Documento | Descripción |
+|-----------|-------------|
+| [COMO_EJECUTAR.md](COMO_EJECUTAR.md) | **Guía completa de comandos BUILD y START** |
+| [COMANDOS.md](COMANDOS.md) | **Referencia rápida de todos los comandos** |
+
+### Comandos Rápidos:
+```bash
+# BUILD: Instalar dependencias
+pip install -r requirements.txt
+# o: npm run install:python
+# o: make build
+
+# START: Ejecutar servidor
+python app.py
+# o: npm start
+# o: ./start.sh
+# o: make start
+```
+
+📖 Ver [COMANDOS.md](COMANDOS.md) para tabla completa de comandos.
 
 ---
 

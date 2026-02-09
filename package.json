@@ -1,0 +1,29 @@
+{
+  "name": "asistente-agrario-ia",
+  "version": "1.0.0",
+  "description": "Asistente de control agrario con IA - Sistema completo",
+  "private": true,
+  "scripts": {
+    "start": "python app.py",
+    "start:backend": "python app.py",
+    "start:model": "python model_api.py",
+    "start:whatsapp": "cd whatsapp && npm start",
+    "install:all": "pip install -r requirements.txt && cd whatsapp && npm install && cd ..",
+    "install:python": "pip install -r requirements.txt",
+    "install:whatsapp": "cd whatsapp && npm install",
+    "dev": "python app.py",
+    "dev:services": "echo 'Ejecuta en terminales separadas:\nTerminal 1: npm run start:model\nTerminal 2: npm run start:backend\nTerminal 3: npm run start:whatsapp'",
+    "test": "python test_qwen_0.5b_integration.py",
+    "validate": "python validate_local_gguf.py",
+    "download:model": "mkdir -p models && wget -O models/qwen2.5-0.5b-instruct-q4_k_m.gguf https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf"
+  },
+  "keywords": [
+    "agriculture",
+    "ai",
+    "whatsapp",
+    "flask",
+    "llm"
+  ],
+  "author": "",
+  "license": "ISC"
+}

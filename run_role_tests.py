@@ -3,7 +3,7 @@ import os
 from llama_cpp import Llama
 
 MODEL_PATH = os.getenv(
-    "MODEL_PATH", "models/qwen2.5-3b-instruct-q4_k_m.gguf"
+    "MODEL_PATH", "models/qwen2.5-0.5b-instruct-q4_k_m.gguf"
 )
 N_CTX = int(os.getenv("N_CTX", "2048"))
 N_THREADS = int(os.getenv("N_THREADS", "1"))
