@@ -4,6 +4,28 @@ MVP en Flask para orquestar un modelo de lenguaje (MML) con **tres roles** y
 contrato JSON estricto, orientado a atención por WhatsApp y llenado automático
 de formularios.
 
+## 🚀 Inicio Rápido
+
+### Comandos para ejecutar el proyecto:
+
+```bash
+# BUILD: Instalar dependencias
+pip install -r requirements.txt
+# o usar: npm run install:python
+
+# START: Ejecutar servidor
+python app.py
+# o usar: npm start
+# o usar: ./start.sh
+
+# Accede a: http://localhost:5000
+# Panel admin: http://localhost:5000/admin
+```
+
+**📖 Guía completa:** Ver [`COMO_EJECUTAR.md`](COMO_EJECUTAR.md) para todos los comandos y opciones.
+
+---
+
 ## 🚀 Despliegue en Producción
 
 Este proyecto está diseñado para desplegarse como **3 servicios independientes**:
